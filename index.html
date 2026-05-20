@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trust & Safety Review Console | Yuvasurya Thammini</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Content moderation</p>
+          <h1>Trust & Safety Review Console</h1>
+          <p class="creator-line">
+            Copyright 2026 Yuvasurya Thammini | Built by Yuvasurya Thammini |
+            <a href="mailto:yuvanaidu8@gmail.com">yuvanaidu8@gmail.com</a>
+          </p>
+        </div>
+        <div class="topbar-actions">
+          <span class="trust-badge">Local rules</span>
+          <button class="icon-button" id="resetRulesButton" type="button" title="Reset rules" aria-label="Reset rules">
+            <span aria-hidden="true">R</span>
+          </button>
+          <button class="secondary-button" id="sampleButton" type="button">Sample</button>
+          <button class="primary-button" id="scanButton" type="button">
+            <span aria-hidden="true">></span>
+            Scan
+          </button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="policy-panel" aria-label="Policy term lists">
+          <div class="panel-header">
+            <div>
+              <h2>Policy Terms</h2>
+              <p id="termCount">0 terms</p>
+            </div>
+            <button class="secondary-button" id="saveRulesButton" type="button">Save</button>
+          </div>
+          <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Policy categories"></div>
+          <div class="category-editor" id="categoryEditor"></div>
+        </aside>
+
+        <section class="review-panel" aria-label="Moderation scanner">
+          <section class="risk-board" aria-label="Risk summary">
+            <div class="risk-dial" id="riskDial" aria-label="Risk score">
+              <span id="riskScore">0</span>
+              <small>risk</small>
+            </div>
+            <div class="risk-copy">
+              <span class="metric-label">Recommended action</span>
+              <h2 id="riskHeadline">Awaiting review</h2>
+              <p id="riskReason">Awaiting content.</p>
+              <div class="signal-chips" id="signalChips"></div>
+            </div>
+            <canvas class="signal-canvas" id="signalCanvas" width="420" height="180" aria-label="Signal graphic"></canvas>
+          </section>
+
+          <section class="case-grid" aria-label="Case details">
+            <label>
+              Case ID
+              <input id="caseIdInput" type="text" />
+            </label>
+            <label>
+              Surface
+              <select id="surfaceSelect">
+                <option>Post</option>
+                <option>Comment</option>
+                <option>Direct message</option>
+                <option>Profile</option>
+                <option>Live chat</option>
+              </select>
+            </label>
+            <label>
+              Reporter count
+              <input id="reporterCountInput" type="number" min="0" value="0" />
+            </label>
+            <label>
+              Account age
+              <select id="accountAgeSelect">
+                <option>Unknown</option>
+                <option>New account</option>
+                <option>Established</option>
+                <option>Trusted</option>
+              </select>
+            </label>
+          </section>
+
+          <div class="input-block">
+            <div class="field-header">
+              <label for="contentInput">Review Text</label>
+              <button class="ghost-button" id="clearButton" type="button">Clear</button>
+            </div>
+            <textarea
+              id="contentInput"
+              spellcheck="true"
+              placeholder="Paste user-generated content here"
+            ></textarea>
+            <div class="input-meta">
+              <span id="characterCount">0 characters</span>
+              <span id="scanTimestamp">No scan yet</span>
+            </div>
+          </div>
+
+          <div class="results-strip" aria-label="Scan summary">
+            <div class="metric">
+              <span class="metric-label">Matches</span>
+              <strong id="matchTotal">0</strong>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Categories</span>
+              <strong id="categoryTotal">0</strong>
+            </div>
+            <div class="metric">
+              <span class="metric-label">PII signals</span>
+              <strong id="piiTotal">0</strong>
+            </div>
+            <div class="metric status-metric" id="riskStatus">
+              <span class="metric-label">Status</span>
+              <strong>No scan</strong>
+            </div>
+          </div>
+
+          <div class="insight-grid">
+            <section class="output-panel" aria-label="Highlighted content">
+              <div class="panel-header compact">
+                <h2>Highlighted Text</h2>
+                <button class="secondary-button" id="copySummaryButton" type="button">Copy Summary</button>
+              </div>
+              <div class="highlight-box" id="highlightBox" aria-live="polite"></div>
+            </section>
+
+            <section class="output-panel" aria-label="Policy distribution">
+              <div class="panel-header compact">
+                <h2>Policy Heatmap</h2>
+                <span class="mini-status" id="highestSeverity">none</span>
+              </div>
+              <div class="category-bars" id="categoryBars"></div>
+              <div class="playbook-list" id="playbookList"></div>
+            </section>
+          </div>
+
+          <div class="output-grid">
+            <section class="output-panel" aria-label="Detected matches">
+              <div class="panel-header compact">
+                <h2>Detected Signals</h2>
+                <div class="export-actions">
+                  <button class="secondary-button" id="exportCsvButton" type="button">CSV</button>
+                  <button class="secondary-button" id="exportJsonButton" type="button">JSON</button>
+                </div>
+              </div>
+              <div class="matches-table-wrap">
+                <table class="matches-table">
+                  <thead>
+                    <tr>
+                      <th>Signal</th>
+                      <th>Category</th>
+                      <th>Severity</th>
+                      <th>Source</th>
+                      <th>Count</th>
+                    </tr>
+                  </thead>
+                  <tbody id="matchesBody">
+                    <tr>
+                      <td colspan="5" class="empty-cell">No matches yet</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="output-panel decision-panel" aria-label="Review decision">
+              <div class="panel-header compact">
+                <h2>Review Decision</h2>
+                <span class="mini-status" id="decisionStatus">Open</span>
+              </div>
+              <div class="checklist" id="reviewChecklist">
+                <label><input type="checkbox" id="contextCheck" /> Context reviewed</label>
+                <label><input type="checkbox" id="policyCheck" /> Policy mapped</label>
+                <label><input type="checkbox" id="appealCheck" /> Appeal path considered</label>
+              </div>
+              <textarea id="reviewNotes" class="review-notes" placeholder="Reviewer notes"></textarea>
+              <div class="decision-actions">
+                <button class="allow-button" type="button" data-action="Allow">Allow</button>
+                <button class="warn-button" type="button" data-action="Warn">Warn</button>
+                <button class="remove-button" type="button" data-action="Remove">Remove</button>
+                <button class="escalate-button" type="button" data-action="Escalate">Escalate</button>
+              </div>
+              <ol class="audit-log" id="auditLog"></ol>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

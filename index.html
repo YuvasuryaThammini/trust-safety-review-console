@@ -3,36 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f766e" />
     <title>Trust & Safety Review Console | Yuvasurya Thammini</title>
     <link rel="stylesheet" href="styles.css" />
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-FSL7F4JSML"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-FSL7F4JSML');
-</script></head>
+  </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">Content moderation</p>
-          <h1>Trust & Safety Review Console</h1>
-          <p class="creator-line">
-            Copyright 2026 Yuvasurya Thammini | Built by Yuvasurya Thammini |
-            <a href="mailto:yuvanaidu8@gmail.com">yuvanaidu8@gmail.com</a>
-          </p>
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img" focusable="false">
+              <path d="M32 5 52 12v15c0 15-8.5 26-20 32C20.5 53 12 42 12 27V12L32 5Z" />
+              <path d="m23 32 6 6 13-15" />
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">Content moderation</p>
+            <h1>Trust & Safety Review Console</h1>
+            <p class="creator-line">
+              Copyright 2026 Yuvasurya Thammini | Built by Yuvasurya Thammini |
+              <a href="mailto:yuvanaidu8@gmail.com">yuvanaidu8@gmail.com</a>
+            </p>
+          </div>
         </div>
         <div class="topbar-actions">
           <span class="trust-badge">Local rules</span>
           <button class="icon-button" id="resetRulesButton" type="button" title="Reset rules" aria-label="Reset rules">
-            <span aria-hidden="true">R</span>
+            <span class="button-icon" aria-hidden="true">&#8635;</span>
           </button>
-          <button class="secondary-button" id="sampleButton" type="button">Load Sample</button>
+          <button class="secondary-button" id="sampleButton" type="button">
+            <span class="button-icon" aria-hidden="true">&#8681;</span>
+            Load Sample
+          </button>
           <button class="primary-button" id="scanButton" type="button">
-            <span aria-hidden="true">></span>
+            <span class="button-icon" aria-hidden="true">&#9654;</span>
             Scan
           </button>
         </div>
@@ -45,7 +49,10 @@
               <h2>Policy Terms</h2>
               <p id="termCount">0 terms</p>
             </div>
-            <button class="secondary-button" id="saveRulesButton" type="button">Save</button>
+            <button class="secondary-button" id="saveRulesButton" type="button">
+              <span class="button-icon" aria-hidden="true">&#10003;</span>
+              Save
+            </button>
           </div>
           <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Policy categories"></div>
           <div class="category-editor" id="categoryEditor"></div>
@@ -104,7 +111,10 @@
             </div>
             <div class="sample-controls">
               <select id="sampleWorkflowSelect" aria-label="Sample workflow"></select>
-              <button class="secondary-button" id="loadSampleButton" type="button">Load</button>
+              <button class="secondary-button" id="loadSampleButton" type="button">
+                <span class="button-icon" aria-hidden="true">&#8681;</span>
+                Load
+              </button>
             </div>
           </section>
 
@@ -147,7 +157,16 @@
             <section class="output-panel" aria-label="Highlighted content">
               <div class="panel-header compact">
                 <h2>Highlighted Text</h2>
-                <button class="secondary-button" id="copySummaryButton" type="button">Copy Summary</button>
+                <div class="export-actions">
+                  <button class="secondary-button" id="redactPiiButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#9632;</span>
+                    Redact PII
+                  </button>
+                  <button class="secondary-button" id="copySummaryButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#9776;</span>
+                    Copy Summary
+                  </button>
+                </div>
               </div>
               <div class="highlight-box" id="highlightBox" aria-live="polite"></div>
             </section>
@@ -167,8 +186,21 @@
               <div class="panel-header compact">
                 <h2>Detected Signals</h2>
                 <div class="export-actions">
-                  <button class="secondary-button" id="exportCsvButton" type="button">CSV</button>
-                  <button class="secondary-button" id="exportJsonButton" type="button">JSON</button>
+                  <select id="severityFilter" class="severity-filter" aria-label="Filter by severity">
+                    <option value="all">All severity</option>
+                    <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                  <button class="secondary-button" id="exportCsvButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#8681;</span>
+                    CSV
+                  </button>
+                  <button class="secondary-button" id="exportJsonButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#123;</span>
+                    JSON
+                  </button>
                 </div>
               </div>
               <div class="matches-table-wrap">
@@ -203,10 +235,22 @@
               </div>
               <textarea id="reviewNotes" class="review-notes" placeholder="Reviewer notes"></textarea>
               <div class="decision-actions">
-                <button class="allow-button" type="button" data-action="Allow">Allow</button>
-                <button class="warn-button" type="button" data-action="Warn">Warn</button>
-                <button class="remove-button" type="button" data-action="Remove">Remove</button>
-                <button class="escalate-button" type="button" data-action="Escalate">Escalate</button>
+                <button class="allow-button" type="button" data-action="Allow">
+                  <span class="button-icon" aria-hidden="true">&#10003;</span>
+                  Allow
+                </button>
+                <button class="warn-button" type="button" data-action="Warn">
+                  <span class="button-icon" aria-hidden="true">!</span>
+                  Warn
+                </button>
+                <button class="remove-button" type="button" data-action="Remove">
+                  <span class="button-icon" aria-hidden="true">&#8722;</span>
+                  Remove
+                </button>
+                <button class="escalate-button" type="button" data-action="Escalate">
+                  <span class="button-icon" aria-hidden="true">&#8593;</span>
+                  Escalate
+                </button>
               </div>
               <ol class="audit-log" id="auditLog"></ol>
             </section>
@@ -214,6 +258,25 @@
         </section>
       </section>
     </main>
+
+    <nav class="mobile-action-bar" aria-label="Mobile quick actions">
+      <button type="button" data-mobile-action="sample">
+        <span aria-hidden="true">&#8681;</span>
+        Sample
+      </button>
+      <button type="button" data-mobile-action="scan">
+        <span aria-hidden="true">&#9654;</span>
+        Scan
+      </button>
+      <button type="button" data-mobile-action="redact">
+        <span aria-hidden="true">&#9632;</span>
+        Redact
+      </button>
+      <button type="button" data-mobile-action="clear">
+        <span aria-hidden="true">&#10005;</span>
+        Clear
+      </button>
+    </nav>
 
     <script src="app.js"></script>
   </body>

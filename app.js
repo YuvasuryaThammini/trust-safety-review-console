@@ -530,6 +530,8 @@ const elements = {
   categoryBars: document.querySelector("#categoryBars"),
   playbookList: document.querySelector("#playbookList"),
   matchesBody: document.querySelector("#matchesBody"),
+  severityFilter: document.querySelector("#severityFilter"),
+  redactPiiButton: document.querySelector("#redactPiiButton"),
   exportCsvButton: document.querySelector("#exportCsvButton"),
   exportJsonButton: document.querySelector("#exportJsonButton"),
   copySummaryButton: document.querySelector("#copySummaryButton"),
@@ -1158,8 +1160,16 @@ function renderScanResults() {
   renderHighlights(text, matches);
   renderCategoryBars(totals.categoryCounts);
   renderPlaybook(totals.playbook);
-  renderMatchesTable(grouped);
+  renderMatchesTable(getVisibleGroups(grouped));
   drawSignalCanvas(totals);
+}
+
+function getVisibleGroups(grouped = latestScan.grouped) {
+  const filter = elements.severityFilter?.value || "all";
+  if (filter === "all") {
+    return grouped;
+  }
+  return grouped.filter((group) => group.severity === filter);
 }
 
 function renderRiskStatus(totals) {
@@ -1451,6 +1461,54 @@ function updateCharacterCount() {
   elements.characterCount.textContent = `${length} ${length === 1 ? "character" : "characters"}`;
 }
 
+function redactPrivacySignals() {
+  if (!latestScan.text || !latestScan.matches.length) {
+    return;
+  }
+
+  const privacyRanges = collapseRedactionRanges(
+    latestScan.matches.filter((match) => match.categoryId === "privacy"),
+  ).sort((a, b) => b.start - a.start);
+
+  if (!privacyRanges.length) {
+    return;
+  }
+
+  let redacted = elements.contentInput.value;
+  privacyRanges.forEach((match) => {
+    redacted = `${redacted.slice(0, match.start)}[REDACTED]${redacted.slice(match.end)}`;
+  });
+
+  elements.contentInput.value = redacted;
+  updateCharacterCount();
+  scanText();
+  reviewState.audit.unshift({
+    action: "Redact PII",
+    time: new Date().toISOString(),
+    caseId: elements.caseIdInput.value,
+    riskScore: latestScan.totals.riskScore,
+    checklist: getChecklistState(),
+    notes: "Privacy signals redacted from review text.",
+  });
+  renderAuditLog();
+}
+
+function collapseRedactionRanges(matches) {
+  const sorted = [...matches].sort((a, b) => a.start - b.start || a.end - b.end);
+  const ranges = [];
+
+  sorted.forEach((match) => {
+    const last = ranges[ranges.length - 1];
+    if (!last || match.start > last.end) {
+      ranges.push({ start: match.start, end: match.end });
+      return;
+    }
+    last.end = Math.max(last.end, match.end);
+  });
+
+  return ranges;
+}
+
 function scheduleScan() {
   window.clearTimeout(scanTimer);
   scanTimer = window.setTimeout(scanText, 250);
@@ -1599,11 +1657,27 @@ elements.contentInput.addEventListener("input", () => {
 elements.surfaceSelect.addEventListener("change", scheduleScan);
 elements.reporterCountInput.addEventListener("input", scheduleScan);
 elements.accountAgeSelect.addEventListener("change", scheduleScan);
+elements.severityFilter.addEventListener("change", () => renderMatchesTable(getVisibleGroups()));
+elements.redactPiiButton.addEventListener("click", redactPrivacySignals);
 elements.exportCsvButton.addEventListener("click", exportCsv);
 elements.exportJsonButton.addEventListener("click", exportJson);
 elements.copySummaryButton.addEventListener("click", copySummary);
 document.querySelectorAll("[data-action]").forEach((button) => {
   button.addEventListener("click", () => recordDecision(button.dataset.action));
+});
+document.querySelectorAll("[data-mobile-action]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const action = button.dataset.mobileAction;
+    if (action === "sample") {
+      loadSampleWorkflow();
+    } else if (action === "scan") {
+      scanText();
+    } else if (action === "redact") {
+      redactPrivacySignals();
+    } else if (action === "clear") {
+      elements.clearButton.click();
+    }
+  });
 });
 window.addEventListener("resize", () => drawSignalCanvas(latestScan.totals));
 

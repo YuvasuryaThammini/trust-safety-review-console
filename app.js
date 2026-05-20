@@ -1,4 +1,4 @@
-const STORAGE_KEY = "trust-safety-review-rules-v2";
+const STORAGE_KEY = "trust-safety-review-rules-v3";
 
 const severityWeights = {
   none: 0,
@@ -22,6 +22,7 @@ const categoryColors = {
   extremism: "#2c2738",
   misinformation: "#346f98",
   impersonation: "#346f98",
+  evasion: "#7a5b1a",
 };
 
 const defaultCategories = [
@@ -43,6 +44,12 @@ const defaultCategories = [
       "trash person",
       "pathetic",
       "freak",
+      "harass them",
+      "pile on",
+      "humiliate them",
+      "worthless person",
+      "go cry",
+      "nobody wants you",
     ],
   },
   {
@@ -59,6 +66,12 @@ const defaultCategories = [
       "protected class",
       "because of your religion",
       "because of your ethnicity",
+      "protected group insult",
+      "identity attack",
+      "religion insult",
+      "ethnicity insult",
+      "ban that group",
+      "not human",
     ],
   },
   {
@@ -78,6 +91,12 @@ const defaultCategories = [
       "beat them up",
       "burn down",
       "bring a gun",
+      "hurt them",
+      "bring a knife",
+      "mass attack",
+      "target them",
+      "violent threat",
+      "school threat",
     ],
   },
   {
@@ -93,6 +112,12 @@ const defaultCategories = [
       "end my life",
       "do not want to live",
       "goodbye forever",
+      "I want to disappear",
+      "I cannot go on",
+      "planning to overdose",
+      "hurt myself tonight",
+      "self injury",
+      "suicide note",
     ],
   },
   {
@@ -107,19 +132,57 @@ const defaultCategories = [
       "underage sexual",
       "grooming",
       "meet a minor",
+      "child grooming",
+      "minor meetup",
+      "underage request",
+      "child sexual content",
+      "exploit a child",
+      "minor private photos",
     ],
   },
   {
     id: "adult",
     label: "Adult Content",
     severity: "medium",
-    terms: ["nude", "porn", "explicit", "sex", "sexual", "escort", "nsfw", "adult video"],
+    terms: [
+      "nude",
+      "porn",
+      "explicit",
+      "sex",
+      "sexual",
+      "escort",
+      "nsfw",
+      "adult video",
+      "adult service",
+      "sexual solicitation",
+      "send nudes",
+      "naked photo",
+      "explicit photo",
+      "hookup for money",
+      "adult content",
+    ],
   },
   {
     id: "drugs",
     label: "Drugs",
     severity: "medium",
-    terms: ["cocaine", "heroin", "meth", "fentanyl", "opioid", "lsd", "mdma", "sell pills"],
+    terms: [
+      "cocaine",
+      "heroin",
+      "meth",
+      "fentanyl",
+      "opioid",
+      "lsd",
+      "mdma",
+      "sell pills",
+      "buy cocaine",
+      "sell heroin",
+      "drug dealer",
+      "ship pills",
+      "illegal pharmacy",
+      "party drugs",
+      "controlled substance",
+    ],
   },
   {
     id: "regulated-goods",
@@ -133,6 +196,13 @@ const defaultCategories = [
       "stolen credit card",
       "unlicensed weapon",
       "ghost gun",
+      "buy firearm",
+      "sell ammunition",
+      "weapon parts",
+      "3d printed gun",
+      "silencer",
+      "explosive device",
+      "stolen account",
     ],
   },
   {
@@ -149,6 +219,15 @@ const defaultCategories = [
       "limited offer",
       "verify your account",
       "send me your code",
+      "investment guarantee",
+      "double your money",
+      "recovery agent",
+      "advance fee",
+      "one time password",
+      "login code",
+      "airdrop reward",
+      "urgent payment",
+      "romance investment",
     ],
   },
   {
@@ -165,6 +244,14 @@ const defaultCategories = [
       "phone number",
       "dox",
       "leak their",
+      "full name and address",
+      "bank account",
+      "routing number",
+      "passport number",
+      "driver license",
+      "medical record",
+      "personal email",
+      "private phone",
     ],
   },
   {
@@ -179,6 +266,12 @@ const defaultCategories = [
       "explosive recipe",
       "martyrdom",
       "attack plan",
+      "recruit for cell",
+      "violent manifesto",
+      "target list",
+      "radicalize",
+      "violent extremist",
+      "extremist recruitment",
     ],
   },
   {
@@ -193,6 +286,13 @@ const defaultCategories = [
       "crisis actor",
       "deep state hoax",
       "guaranteed medical cure",
+      "fake medicine",
+      "do not trust doctors",
+      "false election claim",
+      "disaster hoax",
+      "fabricated evidence",
+      "health conspiracy",
+      "false emergency",
     ],
   },
   {
@@ -206,6 +306,29 @@ const defaultCategories = [
       "bank support agent",
       "admin team",
       "verify your login",
+      "official login team",
+      "platform support",
+      "security department",
+      "we are support",
+      "staff account",
+      "verified admin",
+    ],
+  },
+  {
+    id: "evasion",
+    label: "Evasion",
+    severity: "medium",
+    terms: [
+      "ban evasion",
+      "new account to bypass",
+      "avoid detection",
+      "coded language",
+      "alternate account",
+      "evade moderation",
+      "use symbols to hide",
+      "bypass filter",
+      "spell it differently",
+      "shadow account",
     ],
   },
 ];
@@ -252,10 +375,125 @@ const patternDetectors = [
     severity: "low",
     pattern: /\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b/g,
   },
+  {
+    id: "url",
+    label: "External link",
+    categoryId: "spam-scam",
+    categoryLabel: "Spam & Scam",
+    severity: "low",
+    pattern: /\bhttps?:\/\/[^\s<>"']+/gi,
+  },
+  {
+    id: "crypto-wallet",
+    label: "Crypto wallet pattern",
+    categoryId: "spam-scam",
+    categoryLabel: "Spam & Scam",
+    severity: "medium",
+    pattern: /\b(?:0x[a-fA-F0-9]{40}|[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-zA-HJ-NP-Z0-9]{25,39})\b/g,
+  },
 ];
 
-const sampleText =
-  "I hate you. You are such an idiot. I will leak their home address and password if they do not shut up. Contact target@example.com or use 4111 1111 1111 1111. This also mentions a bomb threat and a gift card code scam.";
+const moderationSamples = [
+  {
+    id: "multi-risk",
+    label: "Multi-risk escalation",
+    surface: "Post",
+    reporters: 4,
+    accountAge: "New account",
+    description: "Mixed harassment, privacy, scam, and threat signals for full-console testing.",
+    text: "I hate you. You are such an idiot. I will leak their home address and password if they do not shut up. Contact target@example.com or use 4111 1111 1111 1111. This also mentions a bomb threat and a gift card code scam.",
+  },
+  {
+    id: "adult",
+    label: "Adult content",
+    surface: "Direct message",
+    reporters: 2,
+    accountAge: "Established",
+    description: "Adult solicitation language with a privacy-adjacent contact request.",
+    text: "This direct message asks for send nudes, an explicit photo, and an adult service meetup. The sender also asks for a private phone number before moving the chat elsewhere.",
+  },
+  {
+    id: "hate",
+    label: "Hate & identity",
+    surface: "Comment",
+    reporters: 6,
+    accountAge: "New account",
+    description: "Identity attack and protected-class harassment signals.",
+    text: "This comment says go back to your country, calls a protected group not human, and adds an ethnicity insult because of your religion.",
+  },
+  {
+    id: "self-harm",
+    label: "Self-harm safety",
+    surface: "Live chat",
+    reporters: 1,
+    accountAge: "Unknown",
+    description: "Self-harm phrases that should route to a careful support workflow.",
+    text: "The user says I cannot go on, I want to disappear, and I am planning to overdose tonight. They also wrote goodbye forever in the chat.",
+  },
+  {
+    id: "child-safety",
+    label: "Child safety",
+    surface: "Direct message",
+    reporters: 8,
+    accountAge: "New account",
+    description: "Non-graphic child-safety terms that should trigger specialist escalation.",
+    text: "A direct message includes child grooming, an underage request, minor private photos, and a minor meetup. This should be handled as a specialist child safety case.",
+  },
+  {
+    id: "privacy",
+    label: "Doxxing & PII",
+    surface: "Post",
+    reporters: 5,
+    accountAge: "Established",
+    description: "Personal data exposure with email, phone, SSN, and address-style signals.",
+    text: "I will dox them and post their full name and address, private phone, personal email user@example.com, SSN 123-45-6789, and bank account details.",
+  },
+  {
+    id: "scam",
+    label: "Scam & impersonation",
+    surface: "Direct message",
+    reporters: 3,
+    accountAge: "New account",
+    description: "Phishing, support impersonation, link, and crypto-payment indicators.",
+    text: "Hello, we are platform support from the official login team. Verify your account at https://example.com/login and send me your code. This limited offer has an investment guarantee and asks for crypto wallet 0x742d35Cc6634C0532925a3b844Bc454e4438f44e.",
+  },
+  {
+    id: "violence",
+    label: "Violent threat",
+    surface: "Comment",
+    reporters: 7,
+    accountAge: "New account",
+    description: "Threat language and target/timing style signals.",
+    text: "The comment includes a violent threat, says bring a gun, target them after the event, and mentions a school threat. It also says hurt them.",
+  },
+  {
+    id: "regulated",
+    label: "Regulated goods",
+    surface: "Post",
+    reporters: 2,
+    accountAge: "Unknown",
+    description: "Weapon, document, and controlled-substance sales language.",
+    text: "The listing says buy firearm, sell ammunition, fake id, counterfeit passport, and ship pills. It also mentions controlled substance delivery.",
+  },
+  {
+    id: "misinformation",
+    label: "Misinformation",
+    surface: "Post",
+    reporters: 3,
+    accountAge: "Established",
+    description: "Health and civic misinformation cues.",
+    text: "The post claims a miracle cure and fake medicine, says do not trust doctors, spreads a false election claim, and calls a disaster hoax with fabricated evidence.",
+  },
+  {
+    id: "evasion",
+    label: "Evasion",
+    surface: "Profile",
+    reporters: 2,
+    accountAge: "New account",
+    description: "Filter and enforcement evasion indicators.",
+    text: "The profile says this is an alternate account for ban evasion. It tells followers to use symbols to hide, spell it differently, and bypass filter checks with coded language.",
+  },
+];
 
 const elements = {
   categoryTabs: document.querySelector("#categoryTabs"),
@@ -268,6 +506,10 @@ const elements = {
   saveRulesButton: document.querySelector("#saveRulesButton"),
   resetRulesButton: document.querySelector("#resetRulesButton"),
   sampleButton: document.querySelector("#sampleButton"),
+  sampleWorkflowSelect: document.querySelector("#sampleWorkflowSelect"),
+  loadSampleButton: document.querySelector("#loadSampleButton"),
+  sampleTitle: document.querySelector("#sampleTitle"),
+  sampleDescription: document.querySelector("#sampleDescription"),
   clearButton: document.querySelector("#clearButton"),
   caseIdInput: document.querySelector("#caseIdInput"),
   surfaceSelect: document.querySelector("#surfaceSelect"),
@@ -413,6 +655,40 @@ function getCaseMetadata() {
     reporterCount: Number(elements.reporterCountInput.value || 0),
     accountAge: elements.accountAgeSelect.value,
   };
+}
+
+function renderSampleWorkflows() {
+  elements.sampleWorkflowSelect.innerHTML = "";
+  moderationSamples.forEach((sample) => {
+    const option = document.createElement("option");
+    option.value = sample.id;
+    option.textContent = sample.label;
+    elements.sampleWorkflowSelect.append(option);
+  });
+  updateSamplePreview();
+}
+
+function getSelectedSample() {
+  return (
+    moderationSamples.find((sample) => sample.id === elements.sampleWorkflowSelect.value) ||
+    moderationSamples[0]
+  );
+}
+
+function updateSamplePreview() {
+  const sample = getSelectedSample();
+  elements.sampleTitle.textContent = sample.label;
+  elements.sampleDescription.textContent = sample.description;
+}
+
+function loadSampleWorkflow(sample = getSelectedSample()) {
+  elements.contentInput.value = sample.text;
+  elements.surfaceSelect.value = sample.surface;
+  elements.reporterCountInput.value = String(sample.reporters);
+  elements.accountAgeSelect.value = sample.accountAge;
+  updateSamplePreview();
+  updateCharacterCount();
+  scanText();
 }
 
 function renderPolicyEditor() {
@@ -839,8 +1115,14 @@ function getPlaybook(matches, grouped, categoryCounts, pii, riskScore) {
   if (ids.has("spam-scam") || ids.has("impersonation")) {
     playbook.push({ title: "Integrity", text: "Compare account behavior, links, and payment or credential requests." });
   }
+  if (ids.has("adult")) {
+    playbook.push({ title: "Adult content", text: "Check consent, solicitation, age context, and surface restrictions." });
+  }
   if (ids.has("misinformation")) {
     playbook.push({ title: "Misinformation", text: "Review claim context, local policy, and potential real-world harm." });
+  }
+  if (ids.has("evasion")) {
+    playbook.push({ title: "Evasion", text: "Review account links, repeated behavior, and attempts to bypass enforcement." });
   }
 
   if (!playbook.length) {
@@ -1301,13 +1583,9 @@ function generateCaseId() {
 elements.scanButton.addEventListener("click", scanText);
 elements.saveRulesButton.addEventListener("click", saveRules);
 elements.resetRulesButton.addEventListener("click", resetRules);
-elements.sampleButton.addEventListener("click", () => {
-  elements.contentInput.value = sampleText;
-  elements.reporterCountInput.value = "4";
-  elements.accountAgeSelect.value = "New account";
-  updateCharacterCount();
-  scanText();
-});
+elements.sampleButton.addEventListener("click", () => loadSampleWorkflow());
+elements.loadSampleButton.addEventListener("click", () => loadSampleWorkflow());
+elements.sampleWorkflowSelect.addEventListener("change", updateSamplePreview);
 elements.clearButton.addEventListener("click", () => {
   elements.contentInput.value = "";
   updateCharacterCount();
@@ -1330,6 +1608,7 @@ document.querySelectorAll("[data-action]").forEach((button) => {
 window.addEventListener("resize", () => drawSignalCanvas(latestScan.totals));
 
 elements.caseIdInput.value = generateCaseId();
+renderSampleWorkflows();
 renderPolicyEditor();
 updateCharacterCount();
 renderAuditLog();

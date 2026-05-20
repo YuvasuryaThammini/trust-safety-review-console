@@ -506,6 +506,7 @@ const elements = {
   saveRulesButton: document.querySelector("#saveRulesButton"),
   resetRulesButton: document.querySelector("#resetRulesButton"),
   sampleButton: document.querySelector("#sampleButton"),
+  delightToggleButton: document.querySelector("#delightToggleButton"),
   sampleWorkflowSelect: document.querySelector("#sampleWorkflowSelect"),
   loadSampleButton: document.querySelector("#loadSampleButton"),
   sampleTitle: document.querySelector("#sampleTitle"),
@@ -541,6 +542,7 @@ const elements = {
   appealCheck: document.querySelector("#appealCheck"),
   reviewNotes: document.querySelector("#reviewNotes"),
   auditLog: document.querySelector("#auditLog"),
+  cursorHalo: document.querySelector("#cursorHalo"),
 };
 
 let categories = loadCategories();
@@ -551,6 +553,10 @@ let reviewState = {
   decision: "Open",
   audit: [],
 };
+let delightEnabled = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let lastTrailAt = 0;
+let haloFrame = 0;
+let pendingHaloPoint = null;
 
 function loadCategories() {
   try {
@@ -1638,10 +1644,75 @@ function generateCaseId() {
   return `TS-${compactDate}-${random}`;
 }
 
+function setDelightMode(enabled) {
+  delightEnabled = enabled && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.body.classList.toggle("delight-enabled", delightEnabled);
+  elements.delightToggleButton.setAttribute("aria-pressed", String(delightEnabled));
+  elements.delightToggleButton.classList.toggle("is-active", delightEnabled);
+}
+
+function moveCursorHalo(point) {
+  if (!delightEnabled || !elements.cursorHalo || point.pointerType === "touch") {
+    return;
+  }
+
+  pendingHaloPoint = point;
+  if (haloFrame) {
+    return;
+  }
+
+  haloFrame = window.requestAnimationFrame(() => {
+    elements.cursorHalo.style.transform = `translate3d(${pendingHaloPoint.clientX - 17}px, ${pendingHaloPoint.clientY - 17}px, 0)`;
+    haloFrame = 0;
+  });
+}
+
+function maybeCreateTrail(point) {
+  if (!delightEnabled || point.pointerType === "touch") {
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastTrailAt < 70) {
+    return;
+  }
+  lastTrailAt = now;
+
+  const dot = document.createElement("span");
+  dot.className = "trail-dot";
+  dot.style.left = `${point.clientX}px`;
+  dot.style.top = `${point.clientY}px`;
+  document.body.append(dot);
+  window.setTimeout(() => dot.remove(), 560);
+}
+
+function createDelightBurst(point) {
+  if (!delightEnabled) {
+    return;
+  }
+
+  const symbols = ["🛡️", "✅", "✨", "🔍", "⚡"];
+  symbols.forEach((symbol, index) => {
+    const pop = document.createElement("span");
+    const angle = (Math.PI * 2 * index) / symbols.length - Math.PI / 2;
+    const distance = 30 + Math.random() * 34;
+    pop.className = "delight-pop";
+    pop.textContent = symbol;
+    pop.style.left = `${point.clientX}px`;
+    pop.style.top = `${point.clientY}px`;
+    pop.style.setProperty("--burst-x", `${Math.cos(angle) * distance}px`);
+    pop.style.setProperty("--burst-y", `${Math.sin(angle) * distance}px`);
+    pop.style.setProperty("--burst-rotate", `${Math.round(Math.random() * 80 - 40)}deg`);
+    document.body.append(pop);
+    window.setTimeout(() => pop.remove(), 800);
+  });
+}
+
 elements.scanButton.addEventListener("click", scanText);
 elements.saveRulesButton.addEventListener("click", saveRules);
 elements.resetRulesButton.addEventListener("click", resetRules);
 elements.sampleButton.addEventListener("click", () => loadSampleWorkflow());
+elements.delightToggleButton.addEventListener("click", () => setDelightMode(!delightEnabled));
 elements.loadSampleButton.addEventListener("click", () => loadSampleWorkflow());
 elements.sampleWorkflowSelect.addEventListener("change", updateSamplePreview);
 elements.clearButton.addEventListener("click", () => {
@@ -1680,8 +1751,14 @@ document.querySelectorAll("[data-mobile-action]").forEach((button) => {
   });
 });
 window.addEventListener("resize", () => drawSignalCanvas(latestScan.totals));
+window.addEventListener("pointermove", (event) => {
+  moveCursorHalo(event);
+  maybeCreateTrail(event);
+});
+window.addEventListener("pointerdown", createDelightBurst);
 
 elements.caseIdInput.value = generateCaseId();
+setDelightMode(delightEnabled);
 renderSampleWorkflows();
 renderPolicyEditor();
 updateCharacterCount();

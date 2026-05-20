@@ -495,6 +495,23 @@ const moderationSamples = [
   },
 ];
 
+const audioTranscriptSample =
+  "Audio transcript: the speaker says they cannot go on, mentions planning to overdose, and says goodbye forever. Another listener reports the live chat for urgent self-harm safety review.";
+
+const videoTranscriptSample =
+  "Video title: urgent account recovery. Description asks viewers to verify your account through https://example.com/check and send me your code. Comments mention official support, investment guarantee, and crypto giveaway.";
+
+const queueSeedCases = moderationSamples.slice(0, 7).map((sample, index) => ({
+  id: `Q-${String(index + 1).padStart(3, "0")}`,
+  sampleId: sample.id,
+  title: sample.label,
+  channel: sample.surface,
+  status: index % 3 === 0 ? "Escalated" : index % 2 === 0 ? "New" : "In review",
+  text: sample.text,
+  reporters: sample.reporters,
+  accountAge: sample.accountAge,
+}));
+
 const elements = {
   categoryTabs: document.querySelector("#categoryTabs"),
   categoryEditor: document.querySelector("#categoryEditor"),
@@ -520,6 +537,26 @@ const elements = {
   categoryTotal: document.querySelector("#categoryTotal"),
   piiTotal: document.querySelector("#piiTotal"),
   riskStatus: document.querySelector("#riskStatus"),
+  queueSummary: document.querySelector("#queueSummary"),
+  queueList: document.querySelector("#queueList"),
+  nextCaseButton: document.querySelector("#nextCaseButton"),
+  liveDemoButton: document.querySelector("#liveDemoButton"),
+  liveStatus: document.querySelector("#liveStatus"),
+  liveProcessed: document.querySelector("#liveProcessed"),
+  liveEscalated: document.querySelector("#liveEscalated"),
+  liveAvgRisk: document.querySelector("#liveAvgRisk"),
+  liveFeed: document.querySelector("#liveFeed"),
+  mediaStatus: document.querySelector("#mediaStatus"),
+  audioPanel: document.querySelector("#audioPanel"),
+  videoPanel: document.querySelector("#videoPanel"),
+  audioTranscript: document.querySelector("#audioTranscript"),
+  videoTranscript: document.querySelector("#videoTranscript"),
+  audioFileInput: document.querySelector("#audioFileInput"),
+  videoFileInput: document.querySelector("#videoFileInput"),
+  audioSampleButton: document.querySelector("#audioSampleButton"),
+  videoSampleButton: document.querySelector("#videoSampleButton"),
+  analyzeAudioButton: document.querySelector("#analyzeAudioButton"),
+  analyzeVideoButton: document.querySelector("#analyzeVideoButton"),
   riskDial: document.querySelector("#riskDial"),
   riskScore: document.querySelector("#riskScore"),
   riskHeadline: document.querySelector("#riskHeadline"),
@@ -535,6 +572,7 @@ const elements = {
   redactPiiButton: document.querySelector("#redactPiiButton"),
   exportCsvButton: document.querySelector("#exportCsvButton"),
   exportJsonButton: document.querySelector("#exportJsonButton"),
+  casePacketButton: document.querySelector("#casePacketButton"),
   copySummaryButton: document.querySelector("#copySummaryButton"),
   decisionStatus: document.querySelector("#decisionStatus"),
   contextCheck: document.querySelector("#contextCheck"),
@@ -542,6 +580,12 @@ const elements = {
   appealCheck: document.querySelector("#appealCheck"),
   reviewNotes: document.querySelector("#reviewNotes"),
   auditLog: document.querySelector("#auditLog"),
+  scoreBreakdown: document.querySelector("#scoreBreakdown"),
+  appealReadinessScore: document.querySelector("#appealReadinessScore"),
+  readinessFill: document.querySelector("#readinessFill"),
+  readinessList: document.querySelector("#readinessList"),
+  caseTimeline: document.querySelector("#caseTimeline"),
+  timelineCount: document.querySelector("#timelineCount"),
   cursorHalo: document.querySelector("#cursorHalo"),
 };
 
@@ -553,6 +597,17 @@ let reviewState = {
   decision: "Open",
   audit: [],
 };
+let reviewQueue = [...queueSeedCases];
+let activeQueueId = reviewQueue[0]?.id || "";
+let liveDemoRunning = false;
+let liveDemoTimer = 0;
+let liveCursor = 0;
+let liveMetrics = {
+  processed: 0,
+  escalated: 0,
+  riskTotal: 0,
+};
+let timelineEvents = [];
 let delightEnabled = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let lastTrailAt = 0;
 let haloFrame = 0;
@@ -648,6 +703,7 @@ function createEmptyScan() {
       patternMatches: 0,
       highestSeverity: "none",
       riskScore: 0,
+      scoreFactors: [],
       recommendedAction: "Awaiting review",
       reason: "Awaiting content.",
       categoryCounts: [],
@@ -696,7 +752,179 @@ function loadSampleWorkflow(sample = getSelectedSample()) {
   elements.accountAgeSelect.value = sample.accountAge;
   updateSamplePreview();
   updateCharacterCount();
+  addTimelineEvent("Sample loaded", sample.label);
   scanText();
+}
+
+function loadQueueCase(caseItem) {
+  if (!caseItem) {
+    return;
+  }
+
+  activeQueueId = caseItem.id;
+  caseItem.status = "In review";
+  elements.caseIdInput.value = caseItem.id;
+  elements.contentInput.value = caseItem.text;
+  elements.surfaceSelect.value = caseItem.channel;
+  elements.reporterCountInput.value = String(caseItem.reporters);
+  elements.accountAgeSelect.value = caseItem.accountAge;
+  updateCharacterCount();
+  addTimelineEvent("Case opened", caseItem.title);
+  scanText();
+  renderQueue();
+}
+
+function renderQueue() {
+  elements.queueList.innerHTML = "";
+  const openCount = reviewQueue.filter((item) => item.status !== "Resolved").length;
+  const escalatedCount = reviewQueue.filter((item) => item.status === "Escalated").length;
+  elements.queueSummary.textContent = `${openCount} open | ${escalatedCount} escalated`;
+
+  reviewQueue.slice(0, 8).forEach((item) => {
+    const button = document.createElement("button");
+    button.className = "queue-card";
+    button.type = "button";
+    button.dataset.status = item.status.toLowerCase().replace(/\s+/g, "-");
+    button.setAttribute("aria-current", String(item.id === activeQueueId));
+
+    const title = document.createElement("strong");
+    title.textContent = item.title;
+
+    const meta = document.createElement("span");
+    meta.textContent = `${item.id} | ${item.channel} | ${item.status}`;
+
+    button.append(title, meta);
+    button.addEventListener("click", () => loadQueueCase(item));
+    elements.queueList.append(button);
+  });
+}
+
+function loadNextQueueCase() {
+  const currentIndex = reviewQueue.findIndex((item) => item.id === activeQueueId);
+  const nextCase = reviewQueue[(currentIndex + 1 + reviewQueue.length) % reviewQueue.length];
+  loadQueueCase(nextCase);
+}
+
+function renderLiveMetrics() {
+  elements.liveProcessed.textContent = String(liveMetrics.processed);
+  elements.liveEscalated.textContent = String(liveMetrics.escalated);
+  elements.liveAvgRisk.textContent = liveMetrics.processed
+    ? String(Math.round(liveMetrics.riskTotal / liveMetrics.processed))
+    : "0";
+  elements.liveStatus.textContent = liveDemoRunning ? "Streaming" : "Paused";
+  elements.liveDemoButton.innerHTML = liveDemoRunning
+    ? '<span class="button-icon" aria-hidden="true">&#10074;&#10074;</span> Stop Live'
+    : '<span class="button-icon" aria-hidden="true">&#9679;</span> Start Live';
+}
+
+function estimateSampleRisk(sample) {
+  const criticalIds = ["child-safety", "self-harm", "violence"];
+  if (criticalIds.includes(sample.id)) {
+    return 94;
+  }
+  if (["privacy", "scam", "regulated"].includes(sample.id)) {
+    return 82;
+  }
+  if (["hate", "adult"].includes(sample.id)) {
+    return 68;
+  }
+  return 45;
+}
+
+function pushLiveItem() {
+  const sample = moderationSamples[liveCursor % moderationSamples.length];
+  liveCursor += 1;
+  const risk = estimateSampleRisk(sample);
+  const caseItem = {
+    id: `LIVE-${String(liveMetrics.processed + 1).padStart(3, "0")}`,
+    sampleId: sample.id,
+    title: sample.label,
+    channel: sample.surface,
+    status: risk >= 80 ? "Escalated" : "New",
+    text: sample.text,
+    reporters: sample.reporters,
+    accountAge: sample.accountAge,
+  };
+
+  reviewQueue.unshift(caseItem);
+  activeQueueId = caseItem.id;
+  liveMetrics.processed += 1;
+  liveMetrics.riskTotal += risk;
+  if (risk >= 80) {
+    liveMetrics.escalated += 1;
+  }
+
+  const feedItem = document.createElement("li");
+  feedItem.className = "live-feed-item";
+  feedItem.dataset.risk = risk >= 80 ? "critical" : risk >= 60 ? "review" : "normal";
+  feedItem.innerHTML = `<strong>${caseItem.title}</strong><span>${caseItem.id} | risk ${risk} | ${caseItem.channel}</span>`;
+  elements.liveFeed.prepend(feedItem);
+  while (elements.liveFeed.children.length > 6) {
+    elements.liveFeed.lastElementChild.remove();
+  }
+
+  addTimelineEvent("Live case received", `${caseItem.id} risk ${risk}`);
+  loadQueueCase(caseItem);
+  renderLiveMetrics();
+}
+
+function toggleLiveDemo() {
+  liveDemoRunning = !liveDemoRunning;
+  if (liveDemoRunning) {
+    pushLiveItem();
+    liveDemoTimer = window.setInterval(pushLiveItem, 3200);
+  } else {
+    window.clearInterval(liveDemoTimer);
+  }
+  renderLiveMetrics();
+}
+
+function switchMediaTab(mode) {
+  document.querySelectorAll("[data-media-tab]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.mediaTab === mode);
+  });
+  elements.audioPanel.classList.toggle("is-active", mode === "audio");
+  elements.videoPanel.classList.toggle("is-active", mode === "video");
+  elements.mediaStatus.textContent = mode === "audio" ? "Audio transcript" : "Video transcript";
+}
+
+function loadMediaText(mode) {
+  const text =
+    mode === "audio" ? elements.audioTranscript.value.trim() : elements.videoTranscript.value.trim();
+  if (!text) {
+    return;
+  }
+
+  elements.caseIdInput.value = `${mode.toUpperCase()}-${generateShortId()}`;
+  elements.surfaceSelect.value = mode === "audio" ? "Live chat" : "Post";
+  elements.reporterCountInput.value = mode === "audio" ? "2" : "3";
+  elements.accountAgeSelect.value = "Unknown";
+  elements.contentInput.value = text;
+  updateCharacterCount();
+  addTimelineEvent(`${mode === "audio" ? "Audio" : "Video"} transcript analyzed`, elements.caseIdInput.value);
+  scanText();
+}
+
+function readTranscriptFile(input, target) {
+  const file = input.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  if (file.type.startsWith("text/") || file.name.toLowerCase().endsWith(".txt")) {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      target.value = String(reader.result || "");
+    });
+    reader.readAsText(file);
+    return;
+  }
+
+  target.value = `${file.name} uploaded. Transcript pending. Reviewer note: add transcript, title, comments, or metadata here for policy review.`;
+}
+
+function generateShortId() {
+  return Math.random().toString(36).slice(2, 7).toUpperCase();
 }
 
 function renderPolicyEditor() {
@@ -977,7 +1205,8 @@ function buildTotals(text, matches, grouped) {
   const highestSeverity = getHighestSeverity(matches);
   const pii = matches.filter((match) => match.categoryId === "privacy").length;
   const patternMatches = matches.filter((match) => match.source === "pattern").length;
-  const riskScore = calculateRiskScore(matches, categoryCounts);
+  const risk = calculateRiskScore(matches, categoryCounts);
+  const riskScore = risk.score;
   const recommendation = getRecommendation(riskScore, highestSeverity, categoryCounts, pii);
 
   return {
@@ -987,6 +1216,7 @@ function buildTotals(text, matches, grouped) {
     patternMatches,
     highestSeverity,
     riskScore,
+    scoreFactors: risk.factors,
     recommendedAction: recommendation.action,
     reason: recommendation.reason,
     categoryCounts,
@@ -1019,14 +1249,44 @@ function getCategoryCounts(matches) {
 
 function calculateRiskScore(matches, categoryCounts) {
   const meta = getCaseMetadata();
-  const base = matches.reduce((sum, match) => sum + severityWeights[match.severity], 0);
+  const factors = [];
+  const severityCounts = matches.reduce((counts, match) => {
+    counts[match.severity] = (counts[match.severity] || 0) + 1;
+    return counts;
+  }, {});
+  const base = Object.entries(severityCounts).reduce((sum, [severity, count]) => {
+    const points = (severityWeights[severity] || 0) * count;
+    if (points > 0) {
+      factors.push({
+        label: `${count} ${severity} signal${count === 1 ? "" : "s"}`,
+        points,
+      });
+    }
+    return sum + points;
+  }, 0);
   const uniqueCategoryBonus = categoryCounts.length * 5;
   const repeatBonus = Math.max(0, matches.length - categoryCounts.length) * 3;
   const reporterBonus = meta.reporterCount >= 5 ? 12 : meta.reporterCount >= 2 ? 7 : 0;
   const accountBonus = meta.accountAge === "New account" ? 6 : 0;
   const surfaceBonus = ["Direct message", "Live chat"].includes(meta.surface) ? 4 : 0;
+  const bonuses = [
+    { label: "Multiple policy areas", points: uniqueCategoryBonus },
+    { label: "Repeated signals", points: repeatBonus },
+    { label: "Reporter volume", points: reporterBonus },
+    { label: "New account context", points: accountBonus },
+    { label: "High-touch surface", points: surfaceBonus },
+  ];
 
-  return Math.min(100, Math.round(base + uniqueCategoryBonus + repeatBonus + reporterBonus + accountBonus + surfaceBonus));
+  bonuses.forEach((bonus) => {
+    if (bonus.points > 0) {
+      factors.push(bonus);
+    }
+  });
+
+  return {
+    score: Math.min(100, Math.round(base + uniqueCategoryBonus + repeatBonus + reporterBonus + accountBonus + surfaceBonus)),
+    factors,
+  };
 }
 
 function getHighestSeverity(matches) {
@@ -1167,6 +1427,9 @@ function renderScanResults() {
   renderCategoryBars(totals.categoryCounts);
   renderPlaybook(totals.playbook);
   renderMatchesTable(getVisibleGroups(grouped));
+  renderScoreBreakdown(totals.scoreFactors);
+  renderAppealReadiness();
+  renderCaseTimeline();
   drawSignalCanvas(totals);
 }
 
@@ -1176,6 +1439,97 @@ function getVisibleGroups(grouped = latestScan.grouped) {
     return grouped;
   }
   return grouped.filter((group) => group.severity === filter);
+}
+
+function renderScoreBreakdown(factors = []) {
+  elements.scoreBreakdown.innerHTML = "";
+
+  if (!factors.length) {
+    const item = document.createElement("li");
+    item.innerHTML = "<span>No active scoring factors</span><strong>+0</strong>";
+    elements.scoreBreakdown.append(item);
+    return;
+  }
+
+  factors.slice(0, 7).forEach((factor) => {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    const points = document.createElement("strong");
+    label.textContent = factor.label;
+    points.textContent = `+${factor.points}`;
+    item.append(label, points);
+    elements.scoreBreakdown.append(item);
+  });
+}
+
+function getAppealReadiness() {
+  const checks = [
+    { label: "Context reviewed", done: elements.contextCheck.checked },
+    { label: "Policy mapped", done: elements.policyCheck.checked },
+    { label: "Appeal path considered", done: elements.appealCheck.checked },
+    { label: "Reviewer notes added", done: elements.reviewNotes.value.trim().length >= 12 },
+    { label: "Evidence scanned", done: latestScan.totals.matches > 0 },
+  ];
+  const complete = checks.filter((item) => item.done).length;
+  return {
+    score: Math.round((complete / checks.length) * 100),
+    checks,
+  };
+}
+
+function renderAppealReadiness() {
+  const readiness = getAppealReadiness();
+  elements.appealReadinessScore.textContent = `${readiness.score}%`;
+  elements.readinessFill.style.width = `${readiness.score}%`;
+  elements.readinessList.innerHTML = "";
+
+  readiness.checks.forEach((check) => {
+    const item = document.createElement("li");
+    item.dataset.done = String(check.done);
+    item.textContent = `${check.done ? "Done" : "Open"} - ${check.label}`;
+    elements.readinessList.append(item);
+  });
+}
+
+function addTimelineEvent(label, detail = "") {
+  timelineEvents.unshift({
+    label,
+    detail,
+    time: new Date().toISOString(),
+  });
+  timelineEvents = timelineEvents.slice(0, 12);
+  renderCaseTimeline();
+}
+
+function renderCaseTimeline() {
+  const events = [...timelineEvents];
+  if (latestScan.scannedAt) {
+    events.unshift({
+      label: "Scan completed",
+      detail: `${latestScan.totals.matches} signals | risk ${latestScan.totals.riskScore}`,
+      time: latestScan.scannedAt,
+    });
+  }
+
+  elements.timelineCount.textContent = String(events.length);
+  elements.caseTimeline.innerHTML = "";
+
+  if (!events.length) {
+    const item = document.createElement("li");
+    item.textContent = "Waiting for case activity";
+    elements.caseTimeline.append(item);
+    return;
+  }
+
+  events.slice(0, 8).forEach((event) => {
+    const item = document.createElement("li");
+    const label = document.createElement("strong");
+    const detail = document.createElement("span");
+    label.textContent = `${new Date(event.time).toLocaleTimeString()} - ${event.label}`;
+    detail.textContent = event.detail;
+    item.append(label, detail);
+    elements.caseTimeline.append(item);
+  });
 }
 
 function renderRiskStatus(totals) {
@@ -1496,6 +1850,7 @@ function redactPrivacySignals() {
     checklist: getChecklistState(),
     notes: "Privacy signals redacted from review text.",
   });
+  addTimelineEvent("Privacy redacted", `${privacyRanges.length} range${privacyRanges.length === 1 ? "" : "s"}`);
   renderAuditLog();
 }
 
@@ -1579,6 +1934,30 @@ function exportJson() {
   );
 }
 
+function exportCasePacket() {
+  const packet = {
+    case: latestScan.case || getCaseMetadata(),
+    recommendation: latestScan.totals.recommendedAction,
+    riskScore: latestScan.totals.riskScore,
+    status: elements.riskStatus.querySelector("strong").textContent,
+    scoreFactors: latestScan.totals.scoreFactors,
+    matches: latestScan.grouped,
+    playbook: latestScan.totals.playbook,
+    appealReadiness: getAppealReadiness(),
+    review: {
+      decision: reviewState.decision,
+      checklist: getChecklistState(),
+      notes: elements.reviewNotes.value,
+      audit: reviewState.audit,
+    },
+    timeline: timelineEvents,
+    excerpt: latestScan.text.slice(0, 800),
+  };
+
+  addTimelineEvent("Case packet exported", packet.case.caseId || "Current case");
+  download("trust-safety-case-packet.json", "application/json;charset=utf-8", JSON.stringify(packet, null, 2));
+}
+
 function copySummary() {
   const summary = [
     `Case: ${latestScan.case?.caseId || elements.caseIdInput.value}`,
@@ -1617,7 +1996,9 @@ function recordDecision(action) {
     notes: elements.reviewNotes.value.trim(),
   });
 
+  addTimelineEvent("Decision recorded", action);
   renderAuditLog();
+  renderAppealReadiness();
 }
 
 function renderAuditLog() {
@@ -1715,6 +2096,23 @@ elements.sampleButton.addEventListener("click", () => loadSampleWorkflow());
 elements.delightToggleButton.addEventListener("click", () => setDelightMode(!delightEnabled));
 elements.loadSampleButton.addEventListener("click", () => loadSampleWorkflow());
 elements.sampleWorkflowSelect.addEventListener("change", updateSamplePreview);
+elements.nextCaseButton.addEventListener("click", loadNextQueueCase);
+elements.liveDemoButton.addEventListener("click", toggleLiveDemo);
+document.querySelectorAll("[data-media-tab]").forEach((button) => {
+  button.addEventListener("click", () => switchMediaTab(button.dataset.mediaTab));
+});
+elements.audioSampleButton.addEventListener("click", () => {
+  elements.audioTranscript.value = audioTranscriptSample;
+  switchMediaTab("audio");
+});
+elements.videoSampleButton.addEventListener("click", () => {
+  elements.videoTranscript.value = videoTranscriptSample;
+  switchMediaTab("video");
+});
+elements.analyzeAudioButton.addEventListener("click", () => loadMediaText("audio"));
+elements.analyzeVideoButton.addEventListener("click", () => loadMediaText("video"));
+elements.audioFileInput.addEventListener("change", () => readTranscriptFile(elements.audioFileInput, elements.audioTranscript));
+elements.videoFileInput.addEventListener("change", () => readTranscriptFile(elements.videoFileInput, elements.videoTranscript));
 elements.clearButton.addEventListener("click", () => {
   elements.contentInput.value = "";
   updateCharacterCount();
@@ -1732,7 +2130,12 @@ elements.severityFilter.addEventListener("change", () => renderMatchesTable(getV
 elements.redactPiiButton.addEventListener("click", redactPrivacySignals);
 elements.exportCsvButton.addEventListener("click", exportCsv);
 elements.exportJsonButton.addEventListener("click", exportJson);
+elements.casePacketButton.addEventListener("click", exportCasePacket);
 elements.copySummaryButton.addEventListener("click", copySummary);
+elements.contextCheck.addEventListener("change", renderAppealReadiness);
+elements.policyCheck.addEventListener("change", renderAppealReadiness);
+elements.appealCheck.addEventListener("change", renderAppealReadiness);
+elements.reviewNotes.addEventListener("input", renderAppealReadiness);
 document.querySelectorAll("[data-action]").forEach((button) => {
   button.addEventListener("click", () => recordDecision(button.dataset.action));
 });
@@ -1760,6 +2163,8 @@ window.addEventListener("pointerdown", createDelightBurst);
 elements.caseIdInput.value = generateCaseId();
 setDelightMode(delightEnabled);
 renderSampleWorkflows();
+renderQueue();
+renderLiveMetrics();
 renderPolicyEditor();
 updateCharacterCount();
 renderAuditLog();

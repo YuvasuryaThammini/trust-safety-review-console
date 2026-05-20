@@ -122,6 +122,41 @@
             </div>
           </section>
 
+          <section class="ops-grid" aria-label="Live moderation operations">
+            <div class="output-panel queue-panel">
+              <div class="panel-header compact">
+                <div>
+                  <h2>Live Review Queue</h2>
+                  <p id="queueSummary">0 open cases</p>
+                </div>
+                <button class="secondary-button" id="nextCaseButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#8594;</span>
+                  Next
+                </button>
+              </div>
+              <div class="queue-list" id="queueList"></div>
+            </div>
+
+            <div class="output-panel live-panel">
+              <div class="panel-header compact">
+                <div>
+                  <h2>Live Text Stream</h2>
+                  <p id="liveStatus">Paused</p>
+                </div>
+                <button class="primary-button" id="liveDemoButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#9679;</span>
+                  Start Live
+                </button>
+              </div>
+              <div class="live-stats" aria-label="Live stream metrics">
+                <span><strong id="liveProcessed">0</strong> processed</span>
+                <span><strong id="liveEscalated">0</strong> escalated</span>
+                <span><strong id="liveAvgRisk">0</strong> avg risk</span>
+              </div>
+              <ol class="live-feed" id="liveFeed"></ol>
+            </div>
+          </section>
+
           <div class="input-block">
             <div class="field-header">
               <label for="contentInput">Review Text</label>
@@ -137,6 +172,57 @@
               <span id="scanTimestamp">No scan yet</span>
             </div>
           </div>
+
+          <section class="media-review output-panel" aria-label="Audio and video review">
+            <div class="panel-header compact">
+              <div>
+                <h2>Audio & Video Review</h2>
+                <p id="mediaStatus">Transcript mode</p>
+              </div>
+              <div class="media-tabs" role="tablist" aria-label="Media review modes">
+                <button class="media-tab is-active" type="button" data-media-tab="audio">Audio</button>
+                <button class="media-tab" type="button" data-media-tab="video">Video</button>
+              </div>
+            </div>
+            <div class="media-panel is-active" id="audioPanel">
+              <div class="media-field-grid">
+                <label>
+                  Audio transcript
+                  <textarea id="audioTranscript" placeholder="Paste audio transcript"></textarea>
+                </label>
+                <div class="media-actions">
+                  <input id="audioFileInput" type="file" accept="audio/*,.txt" />
+                  <button class="secondary-button" id="audioSampleButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#9835;</span>
+                    Audio Sample
+                  </button>
+                  <button class="primary-button" id="analyzeAudioButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#9654;</span>
+                    Analyze
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="media-panel" id="videoPanel">
+              <div class="media-field-grid">
+                <label>
+                  Video transcript or metadata
+                  <textarea id="videoTranscript" placeholder="Paste video transcript, title, comments, or metadata"></textarea>
+                </label>
+                <div class="media-actions">
+                  <input id="videoFileInput" type="file" accept="video/*,.txt" />
+                  <button class="secondary-button" id="videoSampleButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#9658;</span>
+                    Video Sample
+                  </button>
+                  <button class="primary-button" id="analyzeVideoButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#9654;</span>
+                    Analyze
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <div class="results-strip" aria-label="Scan summary">
             <div class="metric">
@@ -156,6 +242,33 @@
               <strong>No scan</strong>
             </div>
           </div>
+
+          <section class="explain-grid" aria-label="Score explanation and readiness">
+            <div class="output-panel">
+              <div class="panel-header compact">
+                <h2>Score Explainability</h2>
+                <span class="mini-status" id="scoreModelLabel">weighted</span>
+              </div>
+              <ul class="score-breakdown" id="scoreBreakdown"></ul>
+            </div>
+
+            <div class="output-panel">
+              <div class="panel-header compact">
+                <h2>Appeal Readiness</h2>
+                <span class="mini-status" id="appealReadinessScore">0%</span>
+              </div>
+              <div class="readiness-meter"><span id="readinessFill"></span></div>
+              <ul class="readiness-list" id="readinessList"></ul>
+            </div>
+
+            <div class="output-panel">
+              <div class="panel-header compact">
+                <h2>Case Timeline</h2>
+                <span class="mini-status" id="timelineCount">0</span>
+              </div>
+              <ol class="case-timeline" id="caseTimeline"></ol>
+            </div>
+          </section>
 
           <div class="insight-grid">
             <section class="output-panel" aria-label="Highlighted content">
@@ -204,6 +317,10 @@
                   <button class="secondary-button" id="exportJsonButton" type="button">
                     <span class="button-icon" aria-hidden="true">&#123;</span>
                     JSON
+                  </button>
+                  <button class="secondary-button" id="casePacketButton" type="button">
+                    <span class="button-icon" aria-hidden="true">&#128196;</span>
+                    Case Packet
                   </button>
                 </div>
               </div>

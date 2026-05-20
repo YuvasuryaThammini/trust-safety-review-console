@@ -27,17 +27,10 @@
           </div>
         </div>
         <div class="topbar-actions">
-          <span class="trust-badge">Local rules</span>
-          <button class="icon-button" id="resetRulesButton" type="button" title="Reset rules" aria-label="Reset rules">
-            <span class="button-icon" aria-hidden="true">&#8635;</span>
-          </button>
+          <span class="trust-badge">Reviewer console</span>
           <button class="secondary-button" id="sampleButton" type="button">
             <span class="button-icon" aria-hidden="true">&#8681;</span>
             Load Sample
-          </button>
-          <button class="secondary-button" id="delightToggleButton" type="button" aria-pressed="true">
-            <span class="button-icon" aria-hidden="true">✨</span>
-            Delight
           </button>
           <button class="primary-button" id="scanButton" type="button">
             <span class="button-icon" aria-hidden="true">&#9654;</span>
@@ -46,231 +39,111 @@
         </div>
       </header>
 
-      <section class="workspace">
-        <aside class="policy-panel" aria-label="Policy term lists">
-          <div class="panel-header">
-            <div>
-              <h2>Policy Terms</h2>
-              <p id="termCount">0 terms</p>
-            </div>
-            <button class="secondary-button" id="saveRulesButton" type="button">
-              <span class="button-icon" aria-hidden="true">&#10003;</span>
-              Save
-            </button>
+      <nav class="app-tabs" aria-label="Console sections">
+        <button class="tab-button is-active" type="button" data-tab-target="reviewTab">Review</button>
+        <button class="tab-button" type="button" data-tab-target="liveTab">Live Queue</button>
+        <button class="tab-button" type="button" data-tab-target="mediaTab">Media Review</button>
+        <button class="tab-button" type="button" data-tab-target="policyTab">Policy Rules</button>
+        <button class="tab-button" type="button" data-tab-target="reportsTab">Reports</button>
+        <button class="tab-button" type="button" data-tab-target="settingsTab">Settings</button>
+      </nav>
+
+      <section class="tab-panel is-active" id="reviewTab" aria-label="Review workspace">
+        <section class="risk-board" aria-label="Risk summary">
+          <div class="risk-dial" id="riskDial" aria-label="Risk score">
+            <span id="riskScore">0</span>
+            <small>risk</small>
           </div>
-          <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Policy categories"></div>
-          <div class="category-editor" id="categoryEditor"></div>
-        </aside>
-
-        <section class="review-panel" aria-label="Moderation scanner">
-          <section class="risk-board" aria-label="Risk summary">
-            <div class="risk-dial" id="riskDial" aria-label="Risk score">
-              <span id="riskScore">0</span>
-              <small>risk</small>
-            </div>
-            <div class="risk-copy">
-              <span class="metric-label">Recommended action</span>
-              <h2 id="riskHeadline">Awaiting review</h2>
-              <p id="riskReason">Awaiting content.</p>
-              <div class="signal-chips" id="signalChips"></div>
-            </div>
-            <canvas class="signal-canvas" id="signalCanvas" width="420" height="180" aria-label="Signal graphic"></canvas>
-          </section>
-
-          <section class="case-grid" aria-label="Case details">
-            <label>
-              Case ID
-              <input id="caseIdInput" type="text" />
-            </label>
-            <label>
-              Surface
-              <select id="surfaceSelect">
-                <option>Post</option>
-                <option>Comment</option>
-                <option>Direct message</option>
-                <option>Profile</option>
-                <option>Live chat</option>
-              </select>
-            </label>
-            <label>
-              Reporter count
-              <input id="reporterCountInput" type="number" min="0" value="0" />
-            </label>
-            <label>
-              Account age
-              <select id="accountAgeSelect">
-                <option>Unknown</option>
-                <option>New account</option>
-                <option>Established</option>
-                <option>Trusted</option>
-              </select>
-            </label>
-          </section>
-
-          <section class="sample-lab" aria-label="Sample workflows">
-            <div>
-              <span class="metric-label">Scenario lab</span>
-              <h2 id="sampleTitle">Choose a sample workflow</h2>
-              <p id="sampleDescription">Load a realistic moderation scenario to test policy detection and review flow.</p>
-            </div>
-            <div class="sample-controls">
-              <select id="sampleWorkflowSelect" aria-label="Sample workflow"></select>
-              <button class="secondary-button" id="loadSampleButton" type="button">
-                <span class="button-icon" aria-hidden="true">&#8681;</span>
-                Load
-              </button>
-            </div>
-          </section>
-
-          <section class="ops-grid" aria-label="Live moderation operations">
-            <div class="output-panel queue-panel">
-              <div class="panel-header compact">
-                <div>
-                  <h2>Live Review Queue</h2>
-                  <p id="queueSummary">0 open cases</p>
-                </div>
-                <button class="secondary-button" id="nextCaseButton" type="button">
-                  <span class="button-icon" aria-hidden="true">&#8594;</span>
-                  Next
-                </button>
-              </div>
-              <div class="queue-list" id="queueList"></div>
-            </div>
-
-            <div class="output-panel live-panel">
-              <div class="panel-header compact">
-                <div>
-                  <h2>Live Text Stream</h2>
-                  <p id="liveStatus">Paused</p>
-                </div>
-                <button class="primary-button" id="liveDemoButton" type="button">
-                  <span class="button-icon" aria-hidden="true">&#9679;</span>
-                  Start Live
-                </button>
-              </div>
-              <div class="live-stats" aria-label="Live stream metrics">
-                <span><strong id="liveProcessed">0</strong> processed</span>
-                <span><strong id="liveEscalated">0</strong> escalated</span>
-                <span><strong id="liveAvgRisk">0</strong> avg risk</span>
-              </div>
-              <ol class="live-feed" id="liveFeed"></ol>
-            </div>
-          </section>
-
-          <div class="input-block">
-            <div class="field-header">
-              <label for="contentInput">Review Text</label>
-              <button class="ghost-button" id="clearButton" type="button">Clear</button>
-            </div>
-            <textarea
-              id="contentInput"
-              spellcheck="true"
-              placeholder="Paste user-generated content here"
-            ></textarea>
-            <div class="input-meta">
-              <span id="characterCount">0 characters</span>
-              <span id="scanTimestamp">No scan yet</span>
-            </div>
+          <div class="risk-copy">
+            <span class="metric-label">Recommended action</span>
+            <h2 id="riskHeadline">Awaiting review</h2>
+            <p id="riskReason">Awaiting content.</p>
+            <div class="signal-chips" id="signalChips"></div>
           </div>
+          <canvas class="signal-canvas" id="signalCanvas" width="420" height="180" aria-label="Signal graphic"></canvas>
+        </section>
 
-          <section class="media-review output-panel" aria-label="Audio and video review">
-            <div class="panel-header compact">
+        <section class="friendly-grid">
+          <div class="review-primary">
+            <section class="case-grid" aria-label="Case details">
+              <label>
+                Case ID
+                <input id="caseIdInput" type="text" />
+              </label>
+              <label>
+                Surface
+                <select id="surfaceSelect">
+                  <option>Post</option>
+                  <option>Comment</option>
+                  <option>Direct message</option>
+                  <option>Profile</option>
+                  <option>Live chat</option>
+                </select>
+              </label>
+              <label>
+                Reporter count
+                <input id="reporterCountInput" type="number" min="0" value="0" />
+              </label>
+              <label>
+                Account age
+                <select id="accountAgeSelect">
+                  <option>Unknown</option>
+                  <option>New account</option>
+                  <option>Established</option>
+                  <option>Trusted</option>
+                </select>
+              </label>
+            </section>
+
+            <section class="sample-lab" aria-label="Sample workflows">
               <div>
-                <h2>Audio & Video Review</h2>
-                <p id="mediaStatus">Transcript mode</p>
+                <span class="metric-label">Scenario lab</span>
+                <h2 id="sampleTitle">Choose a sample workflow</h2>
+                <p id="sampleDescription">Load a realistic moderation scenario to test policy detection and review flow.</p>
               </div>
-              <div class="media-tabs" role="tablist" aria-label="Media review modes">
-                <button class="media-tab is-active" type="button" data-media-tab="audio">Audio</button>
-                <button class="media-tab" type="button" data-media-tab="video">Video</button>
+              <div class="sample-controls">
+                <select id="sampleWorkflowSelect" aria-label="Sample workflow"></select>
+                <button class="secondary-button" id="loadSampleButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#8681;</span>
+                  Load
+                </button>
               </div>
-            </div>
-            <div class="media-panel is-active" id="audioPanel">
-              <div class="media-field-grid">
-                <label>
-                  Audio transcript
-                  <textarea id="audioTranscript" placeholder="Paste audio transcript"></textarea>
-                </label>
-                <div class="media-actions">
-                  <input id="audioFileInput" type="file" accept="audio/*,.txt" />
-                  <button class="secondary-button" id="audioSampleButton" type="button">
-                    <span class="button-icon" aria-hidden="true">&#9835;</span>
-                    Audio Sample
-                  </button>
-                  <button class="primary-button" id="analyzeAudioButton" type="button">
-                    <span class="button-icon" aria-hidden="true">&#9654;</span>
-                    Analyze
-                  </button>
+            </section>
+
+            <section class="output-panel input-panel">
+              <div class="panel-header compact">
+                <div>
+                  <h2>Review Text</h2>
+                  <p><span id="characterCount">0 characters</span> | <span id="scanTimestamp">No scan yet</span></p>
                 </div>
+                <button class="ghost-button" id="clearButton" type="button">Clear</button>
+              </div>
+              <textarea
+                id="contentInput"
+                spellcheck="true"
+                placeholder="Paste user-generated content here"
+              ></textarea>
+            </section>
+
+            <div class="results-strip" aria-label="Scan summary">
+              <div class="metric">
+                <span class="metric-label">Matches</span>
+                <strong id="matchTotal">0</strong>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Categories</span>
+                <strong id="categoryTotal">0</strong>
+              </div>
+              <div class="metric">
+                <span class="metric-label">PII signals</span>
+                <strong id="piiTotal">0</strong>
+              </div>
+              <div class="metric status-metric" id="riskStatus">
+                <span class="metric-label">Status</span>
+                <strong>No scan</strong>
               </div>
             </div>
-            <div class="media-panel" id="videoPanel">
-              <div class="media-field-grid">
-                <label>
-                  Video transcript or metadata
-                  <textarea id="videoTranscript" placeholder="Paste video transcript, title, comments, or metadata"></textarea>
-                </label>
-                <div class="media-actions">
-                  <input id="videoFileInput" type="file" accept="video/*,.txt" />
-                  <button class="secondary-button" id="videoSampleButton" type="button">
-                    <span class="button-icon" aria-hidden="true">&#9658;</span>
-                    Video Sample
-                  </button>
-                  <button class="primary-button" id="analyzeVideoButton" type="button">
-                    <span class="button-icon" aria-hidden="true">&#9654;</span>
-                    Analyze
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
 
-          <div class="results-strip" aria-label="Scan summary">
-            <div class="metric">
-              <span class="metric-label">Matches</span>
-              <strong id="matchTotal">0</strong>
-            </div>
-            <div class="metric">
-              <span class="metric-label">Categories</span>
-              <strong id="categoryTotal">0</strong>
-            </div>
-            <div class="metric">
-              <span class="metric-label">PII signals</span>
-              <strong id="piiTotal">0</strong>
-            </div>
-            <div class="metric status-metric" id="riskStatus">
-              <span class="metric-label">Status</span>
-              <strong>No scan</strong>
-            </div>
-          </div>
-
-          <section class="explain-grid" aria-label="Score explanation and readiness">
-            <div class="output-panel">
-              <div class="panel-header compact">
-                <h2>Score Explainability</h2>
-                <span class="mini-status" id="scoreModelLabel">weighted</span>
-              </div>
-              <ul class="score-breakdown" id="scoreBreakdown"></ul>
-            </div>
-
-            <div class="output-panel">
-              <div class="panel-header compact">
-                <h2>Appeal Readiness</h2>
-                <span class="mini-status" id="appealReadinessScore">0%</span>
-              </div>
-              <div class="readiness-meter"><span id="readinessFill"></span></div>
-              <ul class="readiness-list" id="readinessList"></ul>
-            </div>
-
-            <div class="output-panel">
-              <div class="panel-header compact">
-                <h2>Case Timeline</h2>
-                <span class="mini-status" id="timelineCount">0</span>
-              </div>
-              <ol class="case-timeline" id="caseTimeline"></ol>
-            </div>
-          </section>
-
-          <div class="insight-grid">
             <section class="output-panel" aria-label="Highlighted content">
               <div class="panel-header compact">
                 <h2>Highlighted Text</h2>
@@ -287,42 +160,22 @@
               </div>
               <div class="highlight-box" id="highlightBox" aria-live="polite"></div>
             </section>
-
-            <section class="output-panel" aria-label="Policy distribution">
-              <div class="panel-header compact">
-                <h2>Policy Heatmap</h2>
-                <span class="mini-status" id="highestSeverity">none</span>
-              </div>
-              <div class="category-bars" id="categoryBars"></div>
-              <div class="playbook-list" id="playbookList"></div>
-            </section>
           </div>
 
-          <div class="output-grid">
+          <aside class="review-side">
             <section class="output-panel" aria-label="Detected matches">
               <div class="panel-header compact">
-                <h2>Detected Signals</h2>
-                <div class="export-actions">
-                  <select id="severityFilter" class="severity-filter" aria-label="Filter by severity">
-                    <option value="all">All severity</option>
-                    <option value="critical">Critical</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                  <button class="secondary-button" id="exportCsvButton" type="button">
-                    <span class="button-icon" aria-hidden="true">&#8681;</span>
-                    CSV
-                  </button>
-                  <button class="secondary-button" id="exportJsonButton" type="button">
-                    <span class="button-icon" aria-hidden="true">&#123;</span>
-                    JSON
-                  </button>
-                  <button class="secondary-button" id="casePacketButton" type="button">
-                    <span class="button-icon" aria-hidden="true">&#128196;</span>
-                    Case Packet
-                  </button>
+                <div>
+                  <h2>Detected Signals</h2>
+                  <p id="signalReviewSummary">No signal review yet</p>
                 </div>
+                <select id="severityFilter" class="severity-filter" aria-label="Filter by severity">
+                  <option value="all">All severity</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
               </div>
               <div class="matches-table-wrap">
                 <table class="matches-table">
@@ -349,6 +202,17 @@
                 <h2>Review Decision</h2>
                 <span class="mini-status" id="decisionStatus">Open</span>
               </div>
+              <label class="decision-reason">
+                Decision reason
+                <select id="decisionReasonSelect">
+                  <option value="">Select reason</option>
+                  <option>Policy violation confirmed</option>
+                  <option>Context needed</option>
+                  <option>False positive</option>
+                  <option>PII redaction required</option>
+                  <option>Specialist escalation required</option>
+                </select>
+              </label>
               <div class="checklist" id="reviewChecklist">
                 <label><input type="checkbox" id="contextCheck" /> Context reviewed</label>
                 <label><input type="checkbox" id="policyCheck" /> Policy mapped</label>
@@ -375,6 +239,239 @@
               </div>
               <ol class="audit-log" id="auditLog"></ol>
             </section>
+          </aside>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="liveTab" aria-label="Live moderation operations">
+        <div class="section-intro">
+          <span class="metric-label">Operations</span>
+          <h2>Live queue demo</h2>
+          <p>Simulate incoming cases, click a case to load it into Review, and watch queue metrics update.</p>
+        </div>
+        <section class="ops-grid">
+          <div class="output-panel queue-panel">
+            <div class="panel-header compact">
+              <div>
+                <h2>Live Review Queue</h2>
+                <p id="queueSummary">0 open cases</p>
+              </div>
+              <button class="secondary-button" id="nextCaseButton" type="button">
+                <span class="button-icon" aria-hidden="true">&#8594;</span>
+                Next
+              </button>
+            </div>
+            <div class="queue-list" id="queueList"></div>
+          </div>
+
+          <div class="output-panel live-panel">
+            <div class="panel-header compact">
+              <div>
+                <h2>Live Text Stream</h2>
+                <p id="liveStatus">Paused</p>
+              </div>
+              <button class="primary-button" id="liveDemoButton" type="button">
+                <span class="button-icon" aria-hidden="true">&#9679;</span>
+                Start Live
+              </button>
+            </div>
+            <div class="live-stats" aria-label="Live stream metrics">
+              <span><strong id="liveProcessed">0</strong> processed</span>
+              <span><strong id="liveEscalated">0</strong> escalated</span>
+              <span><strong id="liveAvgRisk">0</strong> avg risk</span>
+            </div>
+            <ol class="live-feed" id="liveFeed"></ol>
+          </div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="mediaTab" aria-label="Audio and video review">
+        <div class="section-intro">
+          <span class="metric-label">Media workflow</span>
+          <h2>Audio & Video Review</h2>
+          <p>Paste transcripts, use sample media transcripts, or upload text transcripts for local browser review.</p>
+        </div>
+        <section class="media-review output-panel">
+          <div class="panel-header compact">
+            <div>
+              <h2>Transcript Review</h2>
+              <p id="mediaStatus">Transcript mode</p>
+            </div>
+            <div class="media-tabs" role="tablist" aria-label="Media review modes">
+              <button class="media-tab is-active" type="button" data-media-tab="audio">Audio</button>
+              <button class="media-tab" type="button" data-media-tab="video">Video</button>
+            </div>
+          </div>
+          <div class="media-panel is-active" id="audioPanel">
+            <div class="media-field-grid">
+              <label>
+                Audio transcript
+                <textarea id="audioTranscript" placeholder="Paste audio transcript"></textarea>
+              </label>
+              <div class="media-actions">
+                <input id="audioFileInput" type="file" accept="audio/*,.txt" />
+                <button class="secondary-button" id="audioSampleButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#9835;</span>
+                  Audio Sample
+                </button>
+                <button class="primary-button" id="analyzeAudioButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#9654;</span>
+                  Analyze
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="media-panel" id="videoPanel" hidden>
+            <div class="media-field-grid">
+              <label>
+                Video transcript or metadata
+                <textarea id="videoTranscript" placeholder="Paste video transcript, title, comments, or metadata"></textarea>
+              </label>
+              <div class="media-actions">
+                <input id="videoFileInput" type="file" accept="video/*,.txt" />
+                <button class="secondary-button" id="videoSampleButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#9658;</span>
+                  Video Sample
+                </button>
+                <button class="primary-button" id="analyzeVideoButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#9654;</span>
+                  Analyze
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="policyTab" aria-label="Policy rules">
+        <div class="section-intro">
+          <span class="metric-label">Rules library</span>
+          <h2>Policy Rules</h2>
+          <p>Edit terms, search categories, and import or export your rule set.</p>
+        </div>
+        <section class="policy-workspace">
+          <aside class="policy-panel" aria-label="Policy term lists">
+            <div class="panel-header">
+              <div>
+                <h2>Policy Terms</h2>
+                <p id="termCount">0 terms</p>
+              </div>
+              <div class="export-actions">
+                <button class="secondary-button" id="saveRulesButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#10003;</span>
+                  Save
+                </button>
+                <button class="secondary-button" id="resetRulesButton" type="button">
+                  <span class="button-icon" aria-hidden="true">&#8635;</span>
+                  Reset
+                </button>
+              </div>
+            </div>
+            <div class="policy-tools">
+              <input id="policySearchInput" type="search" placeholder="Search policy categories" />
+              <button class="secondary-button" id="policyExportButton" type="button">Export Rules</button>
+              <label class="file-button">
+                Import Rules
+                <input id="policyImportInput" type="file" accept="application/json,.json" />
+              </label>
+            </div>
+            <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Policy categories"></div>
+            <div class="category-editor" id="categoryEditor"></div>
+          </aside>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="reportsTab" aria-label="Reports and audit">
+        <div class="section-intro">
+          <span class="metric-label">Evidence</span>
+          <h2>Reports & Quality</h2>
+          <p>Review score explanations, appeal readiness, quality checks, and export case packets.</p>
+        </div>
+        <section class="explain-grid" aria-label="Score explanation and readiness">
+          <div class="output-panel">
+            <div class="panel-header compact">
+              <h2>Score Explainability</h2>
+              <span class="mini-status" id="scoreModelLabel">weighted</span>
+            </div>
+            <ul class="score-breakdown" id="scoreBreakdown"></ul>
+          </div>
+
+          <div class="output-panel">
+            <div class="panel-header compact">
+              <h2>Appeal Readiness</h2>
+              <span class="mini-status" id="appealReadinessScore">0%</span>
+            </div>
+            <div class="readiness-meter"><span id="readinessFill"></span></div>
+            <ul class="readiness-list" id="readinessList"></ul>
+          </div>
+
+          <div class="output-panel">
+            <div class="panel-header compact">
+              <h2>Reviewer Quality</h2>
+              <span class="mini-status" id="reviewerQualityScore">0%</span>
+            </div>
+            <div class="readiness-meter"><span id="qualityFill"></span></div>
+            <ul class="readiness-list" id="qualityList"></ul>
+          </div>
+        </section>
+        <section class="insight-grid">
+          <div class="output-panel">
+            <div class="panel-header compact">
+              <h2>Case Timeline</h2>
+              <span class="mini-status" id="timelineCount">0</span>
+            </div>
+            <ol class="case-timeline" id="caseTimeline"></ol>
+          </div>
+          <div class="output-panel">
+            <div class="panel-header compact">
+              <h2>Policy Heatmap</h2>
+              <span class="mini-status" id="highestSeverity">none</span>
+            </div>
+            <div class="category-bars" id="categoryBars"></div>
+            <div class="playbook-list" id="playbookList"></div>
+          </div>
+        </section>
+        <section class="output-panel report-actions">
+          <div class="panel-header compact">
+            <h2>Exports</h2>
+            <div class="export-actions">
+              <button class="secondary-button" id="exportCsvButton" type="button">CSV</button>
+              <button class="secondary-button" id="exportJsonButton" type="button">JSON</button>
+              <button class="secondary-button" id="casePacketButton" type="button">Case Packet</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="settingsTab" aria-label="Settings">
+        <div class="section-intro">
+          <span class="metric-label">Personalize</span>
+          <h2>Settings</h2>
+          <p>Control the demo experience and visual style.</p>
+        </div>
+        <section class="settings-grid">
+          <div class="output-panel setting-card">
+            <h2>Theme</h2>
+            <button class="secondary-button" id="themeToggleButton" type="button">Switch Theme</button>
+            <p>Toggle between light and dark display modes.</p>
+          </div>
+          <div class="output-panel setting-card">
+            <h2>Compact Mode</h2>
+            <button class="secondary-button" id="compactToggleButton" type="button" aria-pressed="false">Compact Off</button>
+            <p>Reduce spacing for dense reviewer workflows.</p>
+          </div>
+          <div class="output-panel setting-card">
+            <h2>Auto Scan</h2>
+            <button class="secondary-button is-active" id="autoScanToggleButton" type="button" aria-pressed="true">Auto Scan On</button>
+            <p>Automatically rescan after typing or metadata changes.</p>
+          </div>
+          <div class="output-panel setting-card">
+            <h2>Delight Mode</h2>
+            <button class="secondary-button" id="delightToggleButton" type="button" aria-pressed="false">
+              <span class="button-icon" aria-hidden="true">&#10024;</span>
+              Delight Off
+            </button>
+            <p>Optional click and cursor effects for demos.</p>
           </div>
         </section>
       </section>

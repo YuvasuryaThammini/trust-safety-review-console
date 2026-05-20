@@ -575,6 +575,7 @@ const elements = {
   casePacketButton: document.querySelector("#casePacketButton"),
   copySummaryButton: document.querySelector("#copySummaryButton"),
   decisionStatus: document.querySelector("#decisionStatus"),
+  decisionReasonSelect: document.querySelector("#decisionReasonSelect"),
   contextCheck: document.querySelector("#contextCheck"),
   policyCheck: document.querySelector("#policyCheck"),
   appealCheck: document.querySelector("#appealCheck"),
@@ -586,6 +587,16 @@ const elements = {
   readinessList: document.querySelector("#readinessList"),
   caseTimeline: document.querySelector("#caseTimeline"),
   timelineCount: document.querySelector("#timelineCount"),
+  reviewerQualityScore: document.querySelector("#reviewerQualityScore"),
+  qualityFill: document.querySelector("#qualityFill"),
+  qualityList: document.querySelector("#qualityList"),
+  signalReviewSummary: document.querySelector("#signalReviewSummary"),
+  policySearchInput: document.querySelector("#policySearchInput"),
+  policyExportButton: document.querySelector("#policyExportButton"),
+  policyImportInput: document.querySelector("#policyImportInput"),
+  themeToggleButton: document.querySelector("#themeToggleButton"),
+  compactToggleButton: document.querySelector("#compactToggleButton"),
+  autoScanToggleButton: document.querySelector("#autoScanToggleButton"),
   cursorHalo: document.querySelector("#cursorHalo"),
 };
 
@@ -608,7 +619,10 @@ let liveMetrics = {
   riskTotal: 0,
 };
 let timelineEvents = [];
-let delightEnabled = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let signalReviewState = {};
+let policySearchText = "";
+let autoScanEnabled = true;
+let delightEnabled = false;
 let lastTrailAt = 0;
 let haloFrame = 0;
 let pendingHaloPoint = null;
@@ -772,6 +786,7 @@ function loadQueueCase(caseItem) {
   addTimelineEvent("Case opened", caseItem.title);
   scanText();
   renderQueue();
+  switchMainTab("reviewTab");
 }
 
 function renderQueue() {
@@ -864,7 +879,7 @@ function pushLiveItem() {
   }
 
   addTimelineEvent("Live case received", `${caseItem.id} risk ${risk}`);
-  loadQueueCase(caseItem);
+  renderQueue();
   renderLiveMetrics();
 }
 
@@ -883,6 +898,8 @@ function switchMediaTab(mode) {
   document.querySelectorAll("[data-media-tab]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mediaTab === mode);
   });
+  elements.audioPanel.hidden = mode !== "audio";
+  elements.videoPanel.hidden = mode !== "video";
   elements.audioPanel.classList.toggle("is-active", mode === "audio");
   elements.videoPanel.classList.toggle("is-active", mode === "video");
   elements.mediaStatus.textContent = mode === "audio" ? "Audio transcript" : "Video transcript";
@@ -929,7 +946,12 @@ function generateShortId() {
 
 function renderPolicyEditor() {
   elements.categoryTabs.innerHTML = "";
-  categories.forEach((category) => {
+  const visibleCategories = categories.filter((category) =>
+    category.label.toLowerCase().includes(policySearchText) ||
+    category.terms.some((term) => term.toLowerCase().includes(policySearchText)),
+  );
+
+  visibleCategories.forEach((category) => {
     const tab = document.createElement("button");
     tab.className = "category-tab";
     tab.type = "button";
@@ -953,7 +975,10 @@ function renderPolicyEditor() {
     elements.categoryTabs.append(tab);
   });
 
-  const activeCategory = categories.find((category) => category.id === activeCategoryId) || categories[0];
+  const activeCategory =
+    visibleCategories.find((category) => category.id === activeCategoryId) ||
+    visibleCategories[0] ||
+    categories[0];
   if (!activeCategory) {
     return;
   }
@@ -1429,8 +1454,20 @@ function renderScanResults() {
   renderMatchesTable(getVisibleGroups(grouped));
   renderScoreBreakdown(totals.scoreFactors);
   renderAppealReadiness();
+  renderReviewerQuality();
+  renderSignalReviewSummary();
   renderCaseTimeline();
   drawSignalCanvas(totals);
+}
+
+function switchMainTab(tabId) {
+  document.querySelectorAll("[data-tab-target]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.tabTarget === tabId);
+  });
+  document.querySelectorAll(".tab-panel").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.id === tabId);
+  });
+  window.setTimeout(() => drawSignalCanvas(latestScan.totals), 0);
 }
 
 function getVisibleGroups(grouped = latestScan.grouped) {
@@ -1467,6 +1504,7 @@ function getAppealReadiness() {
     { label: "Context reviewed", done: elements.contextCheck.checked },
     { label: "Policy mapped", done: elements.policyCheck.checked },
     { label: "Appeal path considered", done: elements.appealCheck.checked },
+    { label: "Decision reason selected", done: Boolean(elements.decisionReasonSelect.value) },
     { label: "Reviewer notes added", done: elements.reviewNotes.value.trim().length >= 12 },
     { label: "Evidence scanned", done: latestScan.totals.matches > 0 },
   ];
@@ -1488,6 +1526,39 @@ function renderAppealReadiness() {
     item.dataset.done = String(check.done);
     item.textContent = `${check.done ? "Done" : "Open"} - ${check.label}`;
     elements.readinessList.append(item);
+  });
+}
+
+function getReviewerQuality() {
+  const reviewedSignals = Object.keys(signalReviewState).length;
+  const checks = [
+    { label: "Scanned current case", done: latestScan.totals.matches > 0 },
+    { label: "Reviewed at least one signal", done: reviewedSignals > 0 || latestScan.totals.matches === 0 },
+    { label: "Decision reason selected", done: Boolean(elements.decisionReasonSelect.value) },
+    { label: "Reviewer notes are specific", done: elements.reviewNotes.value.trim().length >= 24 },
+    { label: "Appeal checklist touched", done: elements.contextCheck.checked || elements.policyCheck.checked || elements.appealCheck.checked },
+  ];
+  const complete = checks.filter((item) => item.done).length;
+  return {
+    score: Math.round((complete / checks.length) * 100),
+    checks,
+  };
+}
+
+function renderReviewerQuality() {
+  if (!elements.reviewerQualityScore) {
+    return;
+  }
+
+  const quality = getReviewerQuality();
+  elements.reviewerQualityScore.textContent = `${quality.score}%`;
+  elements.qualityFill.style.width = `${quality.score}%`;
+  elements.qualityList.innerHTML = "";
+  quality.checks.forEach((check) => {
+    const item = document.createElement("li");
+    item.dataset.done = String(check.done);
+    item.textContent = `${check.done ? "Done" : "Open"} - ${check.label}`;
+    elements.qualityList.append(item);
   });
 }
 
@@ -1725,6 +1796,8 @@ function renderMatchesTable(grouped) {
 
   grouped.forEach((group) => {
     const row = document.createElement("tr");
+    const key = getGroupKey(group);
+    row.dataset.reviewState = signalReviewState[key] || "";
     const signal = document.createElement("td");
     const category = document.createElement("td");
     const severity = document.createElement("td");
@@ -1739,6 +1812,28 @@ function renderMatchesTable(grouped) {
       signal.append(contextLine);
     });
 
+    const actions = document.createElement("div");
+    actions.className = "signal-actions";
+
+    const confirm = document.createElement("button");
+    confirm.type = "button";
+    confirm.className = "signal-action";
+    confirm.dataset.action = "confirm";
+    confirm.setAttribute("aria-pressed", signalReviewState[key] === "confirmed" ? "true" : "false");
+    confirm.textContent = signalReviewState[key] === "confirmed" ? "Confirmed" : "Confirm";
+    confirm.addEventListener("click", () => markSignalReview(group, "confirmed"));
+
+    const falsePositive = document.createElement("button");
+    falsePositive.type = "button";
+    falsePositive.className = "signal-action";
+    falsePositive.dataset.action = "false-positive";
+    falsePositive.setAttribute("aria-pressed", signalReviewState[key] === "false-positive" ? "true" : "false");
+    falsePositive.textContent = signalReviewState[key] === "false-positive" ? "False positive" : "False +";
+    falsePositive.addEventListener("click", () => markSignalReview(group, "false-positive"));
+
+    actions.append(confirm, falsePositive);
+    signal.append(actions);
+
     category.textContent = group.categoryLabel;
     severity.textContent = group.severity;
     source.textContent = group.source;
@@ -1747,6 +1842,29 @@ function renderMatchesTable(grouped) {
     row.append(signal, category, severity, source, count);
     elements.matchesBody.append(row);
   });
+}
+
+function getGroupKey(group) {
+  return `${group.categoryId}:${group.source}:${group.term.toLowerCase()}`;
+}
+
+function markSignalReview(group, state) {
+  signalReviewState[getGroupKey(group)] = state;
+  addTimelineEvent("Signal reviewed", `${group.term}: ${state}`);
+  renderMatchesTable(getVisibleGroups());
+  renderSignalReviewSummary();
+  renderReviewerQuality();
+}
+
+function renderSignalReviewSummary() {
+  if (!elements.signalReviewSummary) {
+    return;
+  }
+
+  const values = Object.values(signalReviewState);
+  const confirmed = values.filter((value) => value === "confirmed").length;
+  const falsePositive = values.filter((value) => value === "false-positive").length;
+  elements.signalReviewSummary.textContent = `${confirmed} confirmed | ${falsePositive} false positive`;
 }
 
 function drawSignalCanvas(totals) {
@@ -1871,6 +1989,9 @@ function collapseRedactionRanges(matches) {
 }
 
 function scheduleScan() {
+  if (!autoScanEnabled) {
+    return;
+  }
   window.clearTimeout(scanTimer);
   scanTimer = window.setTimeout(scanText, 250);
 }
@@ -1958,6 +2079,64 @@ function exportCasePacket() {
   download("trust-safety-case-packet.json", "application/json;charset=utf-8", JSON.stringify(packet, null, 2));
 }
 
+function exportPolicyRules() {
+  saveActiveEditorTerms();
+  download("trust-safety-policy-rules.json", "application/json;charset=utf-8", JSON.stringify(categories, null, 2));
+}
+
+function importPolicyRules() {
+  const file = elements.policyImportInput.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const parsed = JSON.parse(String(reader.result || "[]"));
+      if (!Array.isArray(parsed)) {
+        return;
+      }
+
+      categories = parsed.map((category, index) => ({
+        id: sanitizeId(category.id) || `custom-${index + 1}`,
+        label: String(category.label || `Custom ${index + 1}`),
+        severity: normalizeSeverity(category.severity),
+        terms: normalizeTerms(category.terms || []),
+      }));
+      activeCategoryId = categories[0]?.id || "custom-1";
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(categories));
+      renderPolicyEditor();
+      scanText();
+      addTimelineEvent("Policy rules imported", `${categories.length} categories`);
+    } catch {
+      addTimelineEvent("Policy import failed", file.name);
+    }
+  });
+  reader.readAsText(file);
+}
+
+function toggleTheme() {
+  document.body.classList.toggle("theme-dark");
+  const enabled = document.body.classList.contains("theme-dark");
+  localStorage.setItem("trust-safety-theme", enabled ? "dark" : "light");
+  elements.themeToggleButton.textContent = enabled ? "Use Light Theme" : "Use Dark Theme";
+}
+
+function toggleCompactMode() {
+  document.body.classList.toggle("compact-mode");
+  const enabled = document.body.classList.contains("compact-mode");
+  elements.compactToggleButton.setAttribute("aria-pressed", String(enabled));
+  elements.compactToggleButton.textContent = enabled ? "Compact On" : "Compact Off";
+}
+
+function toggleAutoScan() {
+  autoScanEnabled = !autoScanEnabled;
+  elements.autoScanToggleButton.setAttribute("aria-pressed", String(autoScanEnabled));
+  elements.autoScanToggleButton.classList.toggle("is-active", autoScanEnabled);
+  elements.autoScanToggleButton.textContent = autoScanEnabled ? "Auto Scan On" : "Auto Scan Off";
+}
+
 function copySummary() {
   const summary = [
     `Case: ${latestScan.case?.caseId || elements.caseIdInput.value}`,
@@ -1986,9 +2165,11 @@ function getChecklistState() {
 function recordDecision(action) {
   reviewState.decision = action;
   elements.decisionStatus.textContent = action;
+  const reason = elements.decisionReasonSelect.value;
 
   reviewState.audit.unshift({
     action,
+    reason,
     time: new Date().toISOString(),
     caseId: elements.caseIdInput.value,
     riskScore: latestScan.totals.riskScore,
@@ -1996,9 +2177,10 @@ function recordDecision(action) {
     notes: elements.reviewNotes.value.trim(),
   });
 
-  addTimelineEvent("Decision recorded", action);
+  addTimelineEvent("Decision recorded", reason ? `${action}: ${reason}` : action);
   renderAuditLog();
   renderAppealReadiness();
+  renderReviewerQuality();
 }
 
 function renderAuditLog() {
@@ -2013,7 +2195,8 @@ function renderAuditLog() {
 
   reviewState.audit.forEach((entry) => {
     const item = document.createElement("li");
-    item.textContent = `${new Date(entry.time).toLocaleTimeString()} - ${entry.action} at risk ${entry.riskScore}`;
+    const reason = entry.reason ? ` (${entry.reason})` : "";
+    item.textContent = `${new Date(entry.time).toLocaleTimeString()} - ${entry.action}${reason} at risk ${entry.riskScore}`;
     elements.auditLog.append(item);
   });
 }
@@ -2030,6 +2213,9 @@ function setDelightMode(enabled) {
   document.body.classList.toggle("delight-enabled", delightEnabled);
   elements.delightToggleButton.setAttribute("aria-pressed", String(delightEnabled));
   elements.delightToggleButton.classList.toggle("is-active", delightEnabled);
+  elements.delightToggleButton.innerHTML = delightEnabled
+    ? '<span class="button-icon" aria-hidden="true">&#10024;</span> Delight On'
+    : '<span class="button-icon" aria-hidden="true">&#10024;</span> Delight Off';
 }
 
 function moveCursorHalo(point) {
@@ -2089,6 +2275,9 @@ function createDelightBurst(point) {
   });
 }
 
+document.querySelectorAll("[data-tab-target]").forEach((button) => {
+  button.addEventListener("click", () => switchMainTab(button.dataset.tabTarget));
+});
 elements.scanButton.addEventListener("click", scanText);
 elements.saveRulesButton.addEventListener("click", saveRules);
 elements.resetRulesButton.addEventListener("click", resetRules);
@@ -2135,7 +2324,23 @@ elements.copySummaryButton.addEventListener("click", copySummary);
 elements.contextCheck.addEventListener("change", renderAppealReadiness);
 elements.policyCheck.addEventListener("change", renderAppealReadiness);
 elements.appealCheck.addEventListener("change", renderAppealReadiness);
-elements.reviewNotes.addEventListener("input", renderAppealReadiness);
+elements.decisionReasonSelect.addEventListener("change", () => {
+  renderAppealReadiness();
+  renderReviewerQuality();
+});
+elements.reviewNotes.addEventListener("input", () => {
+  renderAppealReadiness();
+  renderReviewerQuality();
+});
+elements.policySearchInput.addEventListener("input", () => {
+  policySearchText = elements.policySearchInput.value.trim().toLowerCase();
+  renderPolicyEditor();
+});
+elements.policyExportButton.addEventListener("click", exportPolicyRules);
+elements.policyImportInput.addEventListener("change", importPolicyRules);
+elements.themeToggleButton.addEventListener("click", toggleTheme);
+elements.compactToggleButton.addEventListener("click", toggleCompactMode);
+elements.autoScanToggleButton.addEventListener("click", toggleAutoScan);
 document.querySelectorAll("[data-action]").forEach((button) => {
   button.addEventListener("click", () => recordDecision(button.dataset.action));
 });
@@ -2161,6 +2366,12 @@ window.addEventListener("pointermove", (event) => {
 window.addEventListener("pointerdown", createDelightBurst);
 
 elements.caseIdInput.value = generateCaseId();
+if (localStorage.getItem("trust-safety-theme") === "dark") {
+  document.body.classList.add("theme-dark");
+  elements.themeToggleButton.textContent = "Use Light Theme";
+} else {
+  elements.themeToggleButton.textContent = "Use Dark Theme";
+}
 setDelightMode(delightEnabled);
 renderSampleWorkflows();
 renderQueue();

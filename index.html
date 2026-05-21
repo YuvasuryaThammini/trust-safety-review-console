@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f766e" />
     <title>Trust & Safety Review Console | Yuvasurya Thammini</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -48,6 +54,38 @@
         <button class="tab-button" type="button" data-tab-target="settingsTab">Settings</button>
       </nav>
 
+      <section class="workflow-bridge" aria-label="Unified moderation workflow">
+        <div class="workflow-copy">
+          <span class="metric-label">Unified workflow</span>
+          <h2>Live intake and review stay connected</h2>
+          <p>
+            Start the live queue to simulate incoming cases. New live items are mirrored here with risk
+            preview so demo viewers can follow the moderation journey without confusion.
+          </p>
+        </div>
+        <div class="workflow-stats" role="status" aria-live="polite">
+          <div class="workflow-stat">
+            <span>Live status</span>
+            <strong id="workflowLiveStatus">Paused</strong>
+          </div>
+          <div class="workflow-stat">
+            <span>Queue depth</span>
+            <strong id="workflowQueueDepth">0</strong>
+          </div>
+          <div class="workflow-stat">
+            <span>Last intake</span>
+            <strong id="workflowLastCase">No live case</strong>
+          </div>
+          <div class="workflow-stat">
+            <span>Preview risk</span>
+            <strong id="workflowLastRisk">0</strong>
+          </div>
+        </div>
+        <button class="secondary-button workflow-open-button" id="workflowOpenCaseButton" type="button" disabled>
+          Open Live Case in Review
+        </button>
+      </section>
+
       <section class="tab-panel is-active" id="reviewTab" aria-label="Review workspace">
         <section class="risk-board" aria-label="Risk summary">
           <div class="risk-dial" id="riskDial" aria-label="Risk score">
@@ -61,6 +99,34 @@
             <div class="signal-chips" id="signalChips"></div>
           </div>
           <canvas class="signal-canvas" id="signalCanvas" width="420" height="180" aria-label="Signal graphic"></canvas>
+        </section>
+
+        <section class="live-sync-panel output-panel" aria-label="Live queue mirror">
+          <div class="panel-header compact">
+            <div>
+              <h2>Live Queue Mirror</h2>
+              <p>This panel mirrors the latest live case so Review and Live Queue stay linked.</p>
+            </div>
+            <span class="mini-status" id="liveMirrorBadge">No live case</span>
+          </div>
+          <div class="live-sync-grid">
+            <div class="metric">
+              <span class="metric-label">Case</span>
+              <strong id="liveMirrorCase">-</strong>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Surface</span>
+              <strong id="liveMirrorSurface">-</strong>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Signals</span>
+              <strong id="liveMirrorSignals">0</strong>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Received</span>
+              <strong id="liveMirrorTime">-</strong>
+            </div>
+          </div>
         </section>
 
         <section class="friendly-grid">
@@ -312,7 +378,7 @@
                 <input id="audioFileInput" type="file" accept="audio/*,.txt" />
                 <button class="secondary-button" id="audioSampleButton" type="button">
                   <span class="button-icon" aria-hidden="true">&#9835;</span>
-                  Audio Sample
+                  Next Audio Sample
                 </button>
                 <button class="primary-button" id="analyzeAudioButton" type="button">
                   <span class="button-icon" aria-hidden="true">&#9654;</span>
@@ -331,7 +397,7 @@
                 <input id="videoFileInput" type="file" accept="video/*,.txt" />
                 <button class="secondary-button" id="videoSampleButton" type="button">
                   <span class="button-icon" aria-hidden="true">&#9658;</span>
-                  Video Sample
+                  Next Video Sample
                 </button>
                 <button class="primary-button" id="analyzeVideoButton" type="button">
                   <span class="button-icon" aria-hidden="true">&#9654;</span>
@@ -496,6 +562,13 @@
       </button>
     </nav>
     <div class="cursor-halo" id="cursorHalo" aria-hidden="true"></div>
+    <div class="decision-toast" id="decisionToast" role="status" aria-live="polite" hidden>
+      <div class="decision-toast-icon" id="decisionToastIcon" aria-hidden="true"></div>
+      <div class="decision-toast-copy">
+        <strong id="decisionToastTitle">Decision Recorded</strong>
+        <p id="decisionToastMessage">The tool logged your moderation action.</p>
+      </div>
+    </div>
 
     <script src="app.js"></script>
   </body>

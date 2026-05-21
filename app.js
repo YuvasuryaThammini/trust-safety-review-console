@@ -493,13 +493,117 @@ const moderationSamples = [
     description: "Filter and enforcement evasion indicators.",
     text: "The profile says this is an alternate account for ban evasion. It tells followers to use symbols to hide, spell it differently, and bypass filter checks with coded language.",
   },
+  {
+    id: "coordinated-harassment",
+    label: "Coordinated harassment",
+    surface: "Comment",
+    reporters: 9,
+    accountAge: "Established",
+    description: "Brigading language with dog-piling instructions and demeaning abuse.",
+    text: "Post their private phone and let everyone pile on. Call them worthless, humiliate them in every thread, and make sure nobody wants them in this community.",
+  },
+  {
+    id: "extremism-recruitment",
+    label: "Extremism recruitment",
+    surface: "Direct message",
+    reporters: 5,
+    accountAge: "New account",
+    description: "Recruitment and planning cues that should route to critical escalation.",
+    text: "Join our violent cell and help radicalize new members. We have an attack plan, target list, and need people to recruit for cell operations.",
+  },
+  {
+    id: "regulated-weapons",
+    label: "Weapon sale listing",
+    surface: "Profile",
+    reporters: 3,
+    accountAge: "Unknown",
+    description: "Illegal weapon and accessory sale phrasing across a profile feed.",
+    text: "Unlicensed weapon drop this week: buy firearm, sell ammunition, plus silencer and weapon parts bundles. DM for fast shipping.",
+  },
+  {
+    id: "pii-breach",
+    label: "PII leak threat",
+    surface: "Post",
+    reporters: 6,
+    accountAge: "Established",
+    description: "Explicit doxxing intent with multiple personal identifiers.",
+    text: "If they do not pay, we leak their full name and address, social security number 123-45-6789, bank account, and personal email victim@example.com.",
+  },
+  {
+    id: "financial-fraud",
+    label: "Financial fraud lure",
+    surface: "Direct message",
+    reporters: 4,
+    accountAge: "New account",
+    description: "Credential theft and payment coercion in one scam flow.",
+    text: "Official support notice: verify your account now, send me your one time password, then complete urgent payment through gift card code to avoid account closure.",
+  },
+  {
+    id: "self-harm-urgent",
+    label: "Urgent self-harm note",
+    surface: "Live chat",
+    reporters: 2,
+    accountAge: "Unknown",
+    description: "High urgency self-harm signal needing immediate safety workflow.",
+    text: "I do not want to live and I am planning to overdose tonight. Please tell my family goodbye forever if I disappear.",
+  },
+  {
+    id: "child-contact-risk",
+    label: "Minor contact solicitation",
+    surface: "Direct message",
+    reporters: 7,
+    accountAge: "New account",
+    description: "Minor meetup and grooming-related solicitation indicators.",
+    text: "Do not tell your parents. We can meet a minor in private after school and share minor private photos if you trust me.",
+  },
+  {
+    id: "misinfo-health",
+    label: "Health disinformation blast",
+    surface: "Post",
+    reporters: 3,
+    accountAge: "Established",
+    description: "False public-health claims spread in campaign-style text.",
+    text: "Doctors are lying. This miracle cure is guaranteed medical cure, vaccines are fake poison, and the outbreak is a false emergency hoax.",
+  },
 ];
 
-const audioTranscriptSample =
-  "Audio transcript: the speaker says they cannot go on, mentions planning to overdose, and says goodbye forever. Another listener reports the live chat for urgent self-harm safety review.";
+const audioTranscriptSamples = [
+  {
+    label: "Self-harm hotline escalation",
+    text: "Audio transcript: the speaker says they cannot go on, mentions planning to overdose, and says goodbye forever. Another listener reports the live chat for urgent self-harm safety review.",
+  },
+  {
+    label: "Threatening rant",
+    text: "Audio transcript: person states they will bring a gun and hurt them after the event. They repeat target them twice and add explicit violent threat language.",
+  },
+  {
+    label: "Fraud call script",
+    text: "Audio transcript: caller says they are official support, asks user to verify your account, share one time password, and complete payment through gift card code.",
+  },
+  {
+    label: "Doxxing voice note",
+    text: "Audio transcript: speaker threatens to post private address, personal email, and phone number if the target does not respond immediately.",
+  },
+];
 
-const videoTranscriptSample =
-  "Video title: urgent account recovery. Description asks viewers to verify your account through https://example.com/check and send me your code. Comments mention official support, investment guarantee, and crypto giveaway.";
+const videoTranscriptSamples = [
+  {
+    label: "Account recovery scam video",
+    text: "Video title: urgent account recovery. Description asks viewers to verify your account through https://example.com/check and send me your code. Comments mention official support, investment guarantee, and crypto giveaway.",
+  },
+  {
+    label: "Extremist recruitment clip",
+    text: "Video narration includes violent manifesto themes, asks viewers to recruit for cell operations, and references an attack plan with a target list.",
+  },
+  {
+    label: "Adult solicitation reel",
+    text: "Video caption offers adult service meetup, asks to send nudes, and pushes viewers to move to private phone contact for paid explicit content.",
+  },
+  {
+    label: "Regulated goods listing",
+    text: "Video metadata advertises buy firearm and sell ammunition bundles with fake id add-ons, then posts contact details in comments.",
+  },
+];
 
 const queueSeedCases = moderationSamples.slice(0, 7).map((sample, index) => ({
   id: `Q-${String(index + 1).padStart(3, "0")}`,
@@ -507,6 +611,8 @@ const queueSeedCases = moderationSamples.slice(0, 7).map((sample, index) => ({
   title: sample.label,
   channel: sample.surface,
   status: index % 3 === 0 ? "Escalated" : index % 2 === 0 ? "New" : "In review",
+  riskScore: estimateSampleRisk(sample),
+  receivedAt: new Date(Date.now() - (index + 1) * 390000).toISOString(),
   text: sample.text,
   reporters: sample.reporters,
   accountAge: sample.accountAge,
@@ -546,6 +652,16 @@ const elements = {
   liveEscalated: document.querySelector("#liveEscalated"),
   liveAvgRisk: document.querySelector("#liveAvgRisk"),
   liveFeed: document.querySelector("#liveFeed"),
+  workflowLiveStatus: document.querySelector("#workflowLiveStatus"),
+  workflowQueueDepth: document.querySelector("#workflowQueueDepth"),
+  workflowLastCase: document.querySelector("#workflowLastCase"),
+  workflowLastRisk: document.querySelector("#workflowLastRisk"),
+  workflowOpenCaseButton: document.querySelector("#workflowOpenCaseButton"),
+  liveMirrorBadge: document.querySelector("#liveMirrorBadge"),
+  liveMirrorCase: document.querySelector("#liveMirrorCase"),
+  liveMirrorSurface: document.querySelector("#liveMirrorSurface"),
+  liveMirrorSignals: document.querySelector("#liveMirrorSignals"),
+  liveMirrorTime: document.querySelector("#liveMirrorTime"),
   mediaStatus: document.querySelector("#mediaStatus"),
   audioPanel: document.querySelector("#audioPanel"),
   videoPanel: document.querySelector("#videoPanel"),
@@ -598,6 +714,10 @@ const elements = {
   compactToggleButton: document.querySelector("#compactToggleButton"),
   autoScanToggleButton: document.querySelector("#autoScanToggleButton"),
   cursorHalo: document.querySelector("#cursorHalo"),
+  decisionToast: document.querySelector("#decisionToast"),
+  decisionToastIcon: document.querySelector("#decisionToastIcon"),
+  decisionToastTitle: document.querySelector("#decisionToastTitle"),
+  decisionToastMessage: document.querySelector("#decisionToastMessage"),
 };
 
 let categories = loadCategories();
@@ -626,6 +746,10 @@ let delightEnabled = false;
 let lastTrailAt = 0;
 let haloFrame = 0;
 let pendingHaloPoint = null;
+let audioSampleCursor = 0;
+let videoSampleCursor = 0;
+let latestLivePreview = null;
+let decisionToastTimer = 0;
 
 function loadCategories() {
   try {
@@ -708,6 +832,7 @@ function createEmptyScan() {
   return {
     text: "",
     scannedAt: null,
+    case: null,
     matches: [],
     grouped: [],
     totals: {
@@ -785,7 +910,13 @@ function loadQueueCase(caseItem) {
   updateCharacterCount();
   addTimelineEvent("Case opened", caseItem.title);
   scanText();
+  caseItem.riskScore = latestScan.totals.riskScore;
+  if (caseItem.id.startsWith("LIVE-")) {
+    latestLivePreview = { caseItem, preview: latestScan };
+    renderLiveMirror();
+  }
   renderQueue();
+  updateWorkflowBridge();
   switchMainTab("reviewTab");
 }
 
@@ -793,7 +924,9 @@ function renderQueue() {
   elements.queueList.innerHTML = "";
   const openCount = reviewQueue.filter((item) => item.status !== "Resolved").length;
   const escalatedCount = reviewQueue.filter((item) => item.status === "Escalated").length;
-  elements.queueSummary.textContent = `${openCount} open | ${escalatedCount} escalated`;
+  const inReviewCount = reviewQueue.filter((item) => item.status === "In review").length;
+  elements.queueSummary.textContent = `${openCount} open | ${inReviewCount} in review | ${escalatedCount} escalated`;
+  elements.workflowQueueDepth.textContent = String(openCount);
 
   reviewQueue.slice(0, 8).forEach((item) => {
     const button = document.createElement("button");
@@ -802,13 +935,41 @@ function renderQueue() {
     button.dataset.status = item.status.toLowerCase().replace(/\s+/g, "-");
     button.setAttribute("aria-current", String(item.id === activeQueueId));
 
+    const top = document.createElement("div");
+    top.className = "queue-card-top";
+
     const title = document.createElement("strong");
     title.textContent = item.title;
 
-    const meta = document.createElement("span");
-    meta.textContent = `${item.id} | ${item.channel} | ${item.status}`;
+    const caseId = document.createElement("span");
+    caseId.className = "queue-case-id";
+    caseId.textContent = item.id;
 
-    button.append(title, meta);
+    const meta = document.createElement("div");
+    meta.className = "queue-meta";
+
+    const surfaceChip = document.createElement("span");
+    surfaceChip.className = "queue-chip";
+    surfaceChip.textContent = item.channel;
+
+    const riskChip = document.createElement("span");
+    riskChip.className = "queue-chip";
+    riskChip.dataset.kind = "risk";
+    riskChip.textContent = `Risk ${item.riskScore ?? 0}`;
+
+    const statusChip = document.createElement("span");
+    statusChip.className = "queue-chip";
+    statusChip.dataset.kind = "status";
+    statusChip.textContent = item.status;
+
+    const slaChip = document.createElement("span");
+    slaChip.className = "queue-chip";
+    slaChip.dataset.kind = "sla";
+    slaChip.textContent = formatQueueAge(item.receivedAt);
+
+    top.append(title, caseId);
+    meta.append(surfaceChip, riskChip, statusChip, slaChip);
+    button.append(top, meta);
     button.addEventListener("click", () => loadQueueCase(item));
     elements.queueList.append(button);
   });
@@ -827,20 +988,22 @@ function renderLiveMetrics() {
     ? String(Math.round(liveMetrics.riskTotal / liveMetrics.processed))
     : "0";
   elements.liveStatus.textContent = liveDemoRunning ? "Streaming" : "Paused";
+  elements.workflowLiveStatus.textContent = liveDemoRunning ? "Streaming" : "Paused";
   elements.liveDemoButton.innerHTML = liveDemoRunning
     ? '<span class="button-icon" aria-hidden="true">&#10074;&#10074;</span> Stop Live'
     : '<span class="button-icon" aria-hidden="true">&#9679;</span> Start Live';
+  updateWorkflowBridge();
 }
 
 function estimateSampleRisk(sample) {
-  const criticalIds = ["child-safety", "self-harm", "violence"];
+  const criticalIds = ["child-safety", "self-harm", "violence", "extremism-recruitment"];
   if (criticalIds.includes(sample.id)) {
     return 94;
   }
-  if (["privacy", "scam", "regulated"].includes(sample.id)) {
+  if (["privacy", "scam", "regulated", "regulated-weapons", "financial-fraud", "pii-breach"].includes(sample.id)) {
     return 82;
   }
-  if (["hate", "adult"].includes(sample.id)) {
+  if (["hate", "adult", "coordinated-harassment", "misinfo-health"].includes(sample.id)) {
     return 68;
   }
   return 45;
@@ -849,13 +1012,24 @@ function estimateSampleRisk(sample) {
 function pushLiveItem() {
   const sample = moderationSamples[liveCursor % moderationSamples.length];
   liveCursor += 1;
-  const risk = estimateSampleRisk(sample);
+  const receivedAt = new Date().toISOString();
+  const caseId = `LIVE-${String(liveMetrics.processed + 1).padStart(3, "0")}`;
+  const caseMeta = {
+    caseId,
+    surface: sample.surface,
+    reporterCount: sample.reporters,
+    accountAge: sample.accountAge,
+  };
+  const preview = buildScanSnapshot(sample.text, caseMeta, receivedAt);
+  const risk = preview.totals.riskScore || estimateSampleRisk(sample);
   const caseItem = {
-    id: `LIVE-${String(liveMetrics.processed + 1).padStart(3, "0")}`,
+    id: caseId,
     sampleId: sample.id,
     title: sample.label,
     channel: sample.surface,
-    status: risk >= 80 ? "Escalated" : "New",
+    status: risk >= 80 ? "Escalated" : risk >= 45 ? "In review" : "New",
+    riskScore: risk,
+    receivedAt,
     text: sample.text,
     reporters: sample.reporters,
     accountAge: sample.accountAge,
@@ -872,12 +1046,14 @@ function pushLiveItem() {
   const feedItem = document.createElement("li");
   feedItem.className = "live-feed-item";
   feedItem.dataset.risk = risk >= 80 ? "critical" : risk >= 60 ? "review" : "normal";
-  feedItem.innerHTML = `<strong>${caseItem.title}</strong><span>${caseItem.id} | risk ${risk} | ${caseItem.channel}</span>`;
+  feedItem.innerHTML = `<strong>${caseItem.title}</strong><span>${caseItem.id} | risk ${risk} | ${preview.totals.matches} signals | ${caseItem.channel}</span>`;
   elements.liveFeed.prepend(feedItem);
   while (elements.liveFeed.children.length > 6) {
     elements.liveFeed.lastElementChild.remove();
   }
 
+  latestLivePreview = { caseItem, preview };
+  renderLiveMirror();
   addTimelineEvent("Live case received", `${caseItem.id} risk ${risk}`);
   renderQueue();
   renderLiveMetrics();
@@ -894,6 +1070,57 @@ function toggleLiveDemo() {
   renderLiveMetrics();
 }
 
+function formatQueueAge(receivedAt) {
+  if (!receivedAt) {
+    return "SLA 0m";
+  }
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(receivedAt).getTime()) / 60000));
+  return `SLA ${minutes}m`;
+}
+
+function renderLiveMirror() {
+  if (!latestLivePreview) {
+    elements.liveMirrorBadge.textContent = "No live case";
+    elements.liveMirrorCase.textContent = "-";
+    elements.liveMirrorSurface.textContent = "-";
+    elements.liveMirrorSignals.textContent = "0";
+    elements.liveMirrorTime.textContent = "-";
+    elements.workflowOpenCaseButton.disabled = true;
+    return;
+  }
+
+  const { caseItem, preview } = latestLivePreview;
+  elements.liveMirrorBadge.textContent = caseItem.status;
+  elements.liveMirrorCase.textContent = caseItem.id;
+  elements.liveMirrorSurface.textContent = caseItem.channel;
+  elements.liveMirrorSignals.textContent = String(preview.totals.matches);
+  elements.liveMirrorTime.textContent = new Date(caseItem.receivedAt).toLocaleTimeString();
+  elements.workflowOpenCaseButton.disabled = false;
+}
+
+function updateWorkflowBridge() {
+  elements.workflowQueueDepth.textContent = String(reviewQueue.filter((item) => item.status !== "Resolved").length);
+
+  if (!latestLivePreview) {
+    elements.workflowLastCase.textContent = "No live case";
+    elements.workflowLastRisk.textContent = "0";
+    elements.workflowOpenCaseButton.disabled = true;
+    return;
+  }
+
+  const { caseItem, preview } = latestLivePreview;
+  elements.workflowLastCase.textContent = caseItem.id;
+  elements.workflowLastRisk.textContent = String(preview.totals.riskScore);
+  elements.workflowOpenCaseButton.disabled = false;
+}
+
+function openLatestLiveCase() {
+  if (!latestLivePreview) {
+    return;
+  }
+  loadQueueCase(latestLivePreview.caseItem);
+}
+
 function switchMediaTab(mode) {
   document.querySelectorAll("[data-media-tab]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mediaTab === mode);
@@ -903,6 +1130,31 @@ function switchMediaTab(mode) {
   elements.audioPanel.classList.toggle("is-active", mode === "audio");
   elements.videoPanel.classList.toggle("is-active", mode === "video");
   elements.mediaStatus.textContent = mode === "audio" ? "Audio transcript" : "Video transcript";
+}
+
+function loadNextMediaSample(mode) {
+  const samples = mode === "audio" ? audioTranscriptSamples : videoTranscriptSamples;
+  if (!samples.length) {
+    return;
+  }
+
+  const cursor = mode === "audio" ? audioSampleCursor : videoSampleCursor;
+  const sample = samples[cursor];
+  if (!sample) {
+    return;
+  }
+
+  if (mode === "audio") {
+    audioSampleCursor = (audioSampleCursor + 1) % samples.length;
+    elements.audioTranscript.value = sample.text;
+  } else {
+    videoSampleCursor = (videoSampleCursor + 1) % samples.length;
+    elements.videoTranscript.value = sample.text;
+  }
+
+  switchMediaTab(mode);
+  elements.mediaStatus.textContent = `${mode === "audio" ? "Audio" : "Video"} sample: ${sample.label}`;
+  addTimelineEvent(`${mode === "audio" ? "Audio" : "Video"} sample loaded`, sample.label);
 }
 
 function loadMediaText(mode) {
@@ -1029,8 +1281,11 @@ function updateTermCount() {
 
 function scanText() {
   saveActiveEditorTerms();
+  latestScan = buildScanSnapshot(elements.contentInput.value, getCaseMetadata(), new Date().toISOString());
+  renderScanResults();
+}
 
-  const text = elements.contentInput.value;
+function buildScanSnapshot(text, caseMeta = getCaseMetadata(), scannedAt = null) {
   const rawMatches = [];
 
   categories.forEach((category) => {
@@ -1067,18 +1322,16 @@ function scanText() {
 
   const matches = dedupeOverlappingMatches(rawMatches);
   const grouped = groupMatches(matches);
-  const totals = buildTotals(text, matches, grouped);
+  const totals = buildTotals(text, matches, grouped, caseMeta);
 
-  latestScan = {
+  return {
     text,
-    scannedAt: text ? new Date().toISOString() : null,
-    case: getCaseMetadata(),
+    scannedAt: text ? scannedAt || new Date().toISOString() : null,
+    case: caseMeta,
     matches,
     grouped,
     totals,
   };
-
-  renderScanResults();
 }
 
 function findTermMatches(text, term) {
@@ -1221,7 +1474,7 @@ function groupMatches(matches) {
   });
 }
 
-function buildTotals(text, matches, grouped) {
+function buildTotals(text, matches, grouped, caseMeta) {
   if (!text) {
     return createEmptyScan().totals;
   }
@@ -1230,7 +1483,7 @@ function buildTotals(text, matches, grouped) {
   const highestSeverity = getHighestSeverity(matches);
   const pii = matches.filter((match) => match.categoryId === "privacy").length;
   const patternMatches = matches.filter((match) => match.source === "pattern").length;
-  const risk = calculateRiskScore(matches, categoryCounts);
+  const risk = calculateRiskScore(matches, categoryCounts, caseMeta);
   const riskScore = risk.score;
   const recommendation = getRecommendation(riskScore, highestSeverity, categoryCounts, pii);
 
@@ -1245,7 +1498,7 @@ function buildTotals(text, matches, grouped) {
     recommendedAction: recommendation.action,
     reason: recommendation.reason,
     categoryCounts,
-    playbook: getPlaybook(matches, grouped, categoryCounts, pii, riskScore),
+    playbook: getPlaybook(text, matches, grouped, categoryCounts, pii, riskScore),
   };
 }
 
@@ -1272,8 +1525,7 @@ function getCategoryCounts(matches) {
   });
 }
 
-function calculateRiskScore(matches, categoryCounts) {
-  const meta = getCaseMetadata();
+function calculateRiskScore(matches, categoryCounts, meta = getCaseMetadata()) {
   const factors = [];
   const severityCounts = matches.reduce((counts, match) => {
     counts[match.severity] = (counts[match.severity] || 0) + 1;
@@ -1385,8 +1637,8 @@ function getRecommendation(riskScore, highestSeverity, categoryCounts, pii) {
   };
 }
 
-function getPlaybook(matches, grouped, categoryCounts, pii, riskScore) {
-  if (!latestScan.text && !elements.contentInput.value) {
+function getPlaybook(text, matches, grouped, categoryCounts, pii, riskScore) {
+  if (!text) {
     return [{ title: "Queue", text: "Open case waiting for review text." }];
   }
 
@@ -2181,6 +2433,7 @@ function recordDecision(action) {
   renderAuditLog();
   renderAppealReadiness();
   renderReviewerQuality();
+  showDecisionToast(action, reason);
 }
 
 function renderAuditLog() {
@@ -2199,6 +2452,36 @@ function renderAuditLog() {
     item.textContent = `${new Date(entry.time).toLocaleTimeString()} - ${entry.action}${reason} at risk ${entry.riskScore}`;
     elements.auditLog.append(item);
   });
+}
+
+function showDecisionToast(action, reason) {
+  if (!elements.decisionToast) {
+    return;
+  }
+
+  const config = {
+    Allow: { icon: "✓", title: "Allow Decision Logged", state: "allow" },
+    Warn: { icon: "!", title: "Warn Decision Logged", state: "warn" },
+    Remove: { icon: "-", title: "Remove Decision Logged", state: "remove" },
+    Escalate: { icon: "↑", title: "Escalation Submitted", state: "escalate" },
+  }[action] || { icon: "•", title: "Decision Recorded", state: "default" };
+
+  elements.decisionToast.dataset.state = config.state;
+  elements.decisionToastIcon.textContent = config.icon;
+  elements.decisionToastTitle.textContent = config.title;
+  elements.decisionToastMessage.textContent = reason
+    ? `Reason: ${reason}`
+    : `The tool recorded ${action.toLowerCase()} for this case.`;
+
+  elements.decisionToast.hidden = false;
+  elements.decisionToast.classList.add("is-visible");
+  window.clearTimeout(decisionToastTimer);
+  decisionToastTimer = window.setTimeout(() => {
+    elements.decisionToast.classList.remove("is-visible");
+    window.setTimeout(() => {
+      elements.decisionToast.hidden = true;
+    }, 180);
+  }, 2300);
 }
 
 function generateCaseId() {
@@ -2287,16 +2570,15 @@ elements.loadSampleButton.addEventListener("click", () => loadSampleWorkflow());
 elements.sampleWorkflowSelect.addEventListener("change", updateSamplePreview);
 elements.nextCaseButton.addEventListener("click", loadNextQueueCase);
 elements.liveDemoButton.addEventListener("click", toggleLiveDemo);
+elements.workflowOpenCaseButton.addEventListener("click", openLatestLiveCase);
 document.querySelectorAll("[data-media-tab]").forEach((button) => {
   button.addEventListener("click", () => switchMediaTab(button.dataset.mediaTab));
 });
 elements.audioSampleButton.addEventListener("click", () => {
-  elements.audioTranscript.value = audioTranscriptSample;
-  switchMediaTab("audio");
+  loadNextMediaSample("audio");
 });
 elements.videoSampleButton.addEventListener("click", () => {
-  elements.videoTranscript.value = videoTranscriptSample;
-  switchMediaTab("video");
+  loadNextMediaSample("video");
 });
 elements.analyzeAudioButton.addEventListener("click", () => loadMediaText("audio"));
 elements.analyzeVideoButton.addEventListener("click", () => loadMediaText("video"));
@@ -2376,6 +2658,8 @@ setDelightMode(delightEnabled);
 renderSampleWorkflows();
 renderQueue();
 renderLiveMetrics();
+renderLiveMirror();
+updateWorkflowBridge();
 renderPolicyEditor();
 updateCharacterCount();
 renderAuditLog();
